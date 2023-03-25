@@ -168,8 +168,6 @@ pub mod pallet {
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a key.
     pub type TotalKeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
-    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] // --- MAP ( hot ) --> cold | Returns the controlling coldkey for a key.
     pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
 	#[pallet::storage] // --- MAP ( hot ) --> take | Returns the key delegation take. And signals that this key is open for delegation.
@@ -562,12 +560,8 @@ pub mod pallet {
 					Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
 					BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
 					IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
-	
-					// Fill stake information.
-					Owner::<T>::insert(key.clone(), coldkey.clone());
-	
+
 					TotalKeyStake::<T>::insert(key.clone(), stake);
-					TotalColdkeyStake::<T>::insert(coldkey.clone(), TotalColdkeyStake::<T>::get(coldkey).saturating_add(*stake));
 
 					// Update total issuance value
 					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));

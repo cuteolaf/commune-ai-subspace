@@ -386,16 +386,6 @@ benchmarks! {
 
   }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, netuid, min_allowed_weights)
 
-  benchmark_sudo_set_validator_batch_size{
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let validator_batch_size: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
-
-  }: sudo_set_validator_batch_size(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_batch_size)
-
   benchmark_sudo_set_validator_epochs_per_reset {
     let netuid: u16 = 1;
     let tempo: u16 = 1;
