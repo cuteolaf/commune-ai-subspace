@@ -224,6 +224,9 @@ impl<T: Config> Pallet<T> {
         TotalNetworks::<T>::mutate( |n| *n += 1 );
 
         // --- 6. Set all default values **explicitly**.
+        SubnetNamespace::<T>::insert( name, netuid );
+
+        // --- 6. Set all default values **explicitly**.
         Self::set_default_values_for_all_parameters( netuid );
     }
 

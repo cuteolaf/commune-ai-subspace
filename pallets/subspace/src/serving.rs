@@ -82,7 +82,7 @@ impl<T: Config> Pallet<T> {
         prev_axon.port = port;
         prev_axon.name = name.clone();
         Axons::<T>::insert( netuid, key_id.clone(), prev_axon.clone() );
-        SubnetNamespace::<T>::insert( netuid, name.clone(), prev_axon.clone() );
+        AxonNamespace::<T>::insert( netuid, name.clone(), prev_axon.clone() );
         // --- 7. We deposit axon served event.
         log::info!("AxonServed( key:{:?} ) ", key_id.clone() );
         Self::deposit_event(Event::AxonServed( netuid, key_id ));
