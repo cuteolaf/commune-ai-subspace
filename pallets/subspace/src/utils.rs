@@ -35,7 +35,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_dividends( netuid:u16 ) -> Vec<u16> { Dividends::<T>::get( netuid ) }
     pub fn get_last_update( netuid:u16 ) -> Vec<u64> { LastUpdate::<T>::get( netuid ) }
     pub fn get_pruning_score( netuid:u16 ) -> Vec<u16> { PruningScores::<T>::get( netuid ) }
-    pub fn get_validator_permit( netuid:u16 ) -> Vec<bool> { ValidatorPermit::<T>::get( netuid ) }
 
     
     pub fn set_last_update_for_uid( netuid:u16, uid: u16, last_update: u64 ) { 
@@ -59,13 +58,7 @@ impl<T: Config> Pallet<T> {
         assert!( uid < SubnetworkN::<T>::get( netuid ) );
         PruningScores::<T>::mutate( netuid, |v| v[uid as usize] = pruning_score );
     }
-    pub fn set_validator_permit_for_uid( netuid:u16, uid: u16, validator_permit: bool ) { 
-        let mut updated_validator_permit = Self::get_validator_permit( netuid ); 
-        if (uid as usize) < updated_validator_permit.len() { 
-            updated_validator_permit[uid as usize] = validator_permit;
-            ValidatorPermit::<T>::insert( netuid, updated_validator_permit );
-        }  
-    }
+
 
     pub fn get_rank_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Rank::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_emission_for_uid( netuid:u16, uid: u16) -> u64 {let vec =  Emission::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
@@ -74,7 +67,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_dividends_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Dividends::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_last_update_for_uid( netuid:u16, uid: u16) -> u64 { let vec = LastUpdate::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_pruning_score_for_uid( netuid:u16, uid: u16) -> u16 { let vec = PruningScores::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return u16::MAX } }
-    pub fn get_validator_permit_for_uid( netuid:u16, uid: u16) -> bool { let vec = ValidatorPermit::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
 
     // ============================
 	// ==== Subnetwork Getters ====

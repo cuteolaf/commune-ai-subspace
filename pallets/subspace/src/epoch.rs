@@ -82,24 +82,9 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut active_stake );
         log::trace!( "S (mask+norm): {:?}", &active_stake );
 
-        // =======================
-        // == Validator permits ==
-        // =======================
-
-        // Get current validator permits.
-        let validator_permits: Vec<bool> = Self::get_validator_permit( netuid );
-        log::trace!( "validator_permits: {:?}", validator_permits );
-
-        // Logical negation of validator_permits.
-        let validator_forbids: Vec<bool> = validator_permits.iter().map(|&b| !b).collect();
-
         // Get max allowed validators.
         let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
         log::trace!( "max_allowed_validators: {:?}", max_allowed_validators );
-
-        // Get new validator permits.
-        let new_validator_permits: Vec<bool> = is_topk( &stake, max_allowed_validators as usize );
-        log::trace!( "new_validator_permits: {:?}", new_validator_permits );
 
         // =============
         // == Weights ==
@@ -108,10 +93,6 @@ impl<T: Config> Pallet<T> {
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
         // log::trace!( "W: {:?}", &weights );
-
-        // Mask weights that are not from permitted validators.
-        weights = mask_rows_sparse( &validator_forbids, &weights );
-        // log::trace!( "W (permit): {:?}", &weights );
 
         // Remove self-weight by masking diagonal.
         weights = mask_diag_sparse( &weights );
@@ -219,19 +200,11 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::insert( netuid, cloned_incentive );
         Dividends::<T>::insert( netuid, cloned_dividends );
         PruningScores::<T>::insert( netuid, cloned_pruning_scores );
-        ValidatorPermit::<T>::insert( netuid, new_validator_permits.clone() );
 
         for i in 0..n {
-            // Set bonds only if uid retains validator permit, otherwise clear bonds.
-            if new_validator_permits[i as usize] {
-                let new_bonds_row: Vec<(u16,u16)> = bonds_delta[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect();
-                Bonds::<T>::insert( netuid, i, new_bonds_row );
-            }
-            else if validator_permits[ i as usize ] {
-                // Only overwrite the intersection.
-                let new_empty_bonds_row: Vec<(u16,u16)> = vec![];
-                Bonds::<T>::insert( netuid, i, new_empty_bonds_row );
-            }
+
+            let new_bonds_row: Vec<(u16,u16)> = bonds_delta[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect();
+            Bonds::<T>::insert( netuid, i, new_bonds_row );
         }
 
         // Emission tuples ( keys, u64 emission)

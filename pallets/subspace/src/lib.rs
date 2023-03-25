@@ -398,9 +398,6 @@ pub mod pallet {
 	pub(super) type LastUpdate<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
 	#[pallet::storage] // --- DMAP ( netuid ) --> pruning_scores
 	pub(super) type PruningScores<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T> >;
-	#[pallet::storage] // --- DMAP ( netuid ) --> validator_permit
-    pub(super) type ValidatorPermit<T:Config> = StorageMap<_, Identity, u16, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
-
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> bonds
@@ -459,7 +456,6 @@ pub mod pallet {
 		NotEnoughStaketoWithdraw, // ---- Thrown when the caller requests removing more stake then there exists in the staking account. See: fn remove_stake.
 		NotEnoughBalanceToStake, //  ---- Thrown when the caller requests adding more stake than there exists in the cold key account. See: fn add_stake
 		BalanceWithdrawalError, // ---- Thrown when the caller tries to add stake, but for some reason the requested amount could not be withdrawn from the coldkey account
-		NoValidatorPermit, // ---- Thrown when the caller attempts to set non-self weights without being a permitted validator.
 		WeightVecNotEqualSize, // ---- Thrown when the caller attempts to set the weight keys and values but these vectors have different size.
 		DuplicateUids, // ---- Thrown when the caller attempts to set weights with duplicate uids in the weight matrix.
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
@@ -553,7 +549,6 @@ pub mod pallet {
 					Dividends::<T>::mutate(netuid, |v| v.push(0));
 					LastUpdate::<T>::mutate(netuid, |v| v.push(0));
 					PruningScores::<T>::mutate(netuid, |v| v.push(0));
-					ValidatorPermit::<T>::mutate(netuid, |v| v.push(false));
 			
 					// Insert account information.
 					Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.

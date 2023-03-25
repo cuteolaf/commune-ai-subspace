@@ -282,7 +282,6 @@ impl<T: Config> Pallet<T> {
         Dividends::<T>::remove( netuid );
         PruningScores::<T>::remove( netuid );
         LastUpdate::<T>::remove( netuid );
-        ValidatorPermit::<T>::remove( netuid );
 
         // --- 2. Erase network parameters.
         Tempo::<T>::remove( netuid );

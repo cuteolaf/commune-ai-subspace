@@ -40,9 +40,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'SettingWeightsTooFast':
     // 		- Attempting to set weights faster than the weights_set_rate_limit.
     //
-    // 	* 'NoValidatorPermit':
-    // 		- Attempting to set non-self weights without a validator permit.
-    //
+
     // 	* 'WeightVecNotEqualSize':
     // 		- Attempting to set weights with uids not of same length.
     //
@@ -89,9 +87,6 @@ impl<T: Config> Pallet<T> {
         // --- 8. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
         let current_block: u64 = Self::get_current_block_as_u64();
         ensure!( Self::check_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsTooFast );
-
-        // --- 9. Check that the neuron uid is an allowed validator permitted to set non-self weights.
-        ensure!( Self::check_validator_permit( netuid, neuron_uid, &uids, &values ), Error::<T>::NoValidatorPermit );
 
         // --- 10. Ensure the passed uids contain no duplicates.
         ensure!( !Self::has_duplicate_uids( &uids ), Error::<T>::DuplicateUids );
@@ -176,15 +171,6 @@ impl<T: Config> Pallet<T> {
         return false;
     }
 
-    // Returns True if setting self-weight or has validator permit.
-    pub fn check_validator_permit( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
-        // Check self weight. Allowed to set single value for self weight.
-        if Self::is_self_weight(uid, uids, weights) {
-            return true;
-        }
-        // Check if uid has validator permit.
-        Self::get_validator_permit_for_uid( netuid, uid )
-    }
 
     // Returns True if the uids and weights are have a valid length for uid on network.
     pub fn check_length( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
