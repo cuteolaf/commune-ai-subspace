@@ -96,61 +96,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    // ---- The implementation for the extrinsic sudo_add_network_connect_requirement.
-    // Args:
-    // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The caller, must be sudo.
-    //
-    // 	* `netuid_a` (u16):
-    // 		- The network we are adding the requirment to (parent network)
-    //
-    // 	* `netuid_b` (u16):
-    // 		- The network we the requirement refers to (child network)
-    //
-    // 	* `prunning_score_requirement` (u16):
-    // 		- The topk percentile prunning score requirement (u16:MAX normalized.)
-    //
-    pub fn do_sudo_add_network_connection_requirement(
-        origin: T::RuntimeOrigin, 
-        netuid_a: u16,
-        netuid_b: u16,
-        requirement: u16
-    ) -> dispatch::DispatchResult {
-        ensure_root( origin )?;
-        ensure!( netuid_a != netuid_b, Error::<T>::InvalidConnectionRequirement );
-        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
-        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
-        Self::add_connection_requirement( netuid_a, netuid_b, requirement );
-        log::info!("NetworkConnectionAdded( netuid_a:{:?}, netuid_b:{:?} requirement: {:?} )", netuid_a, netuid_b, requirement);
-        Self::deposit_event( Event::NetworkConnectionAdded( netuid_a, netuid_b, requirement ) );
-        Ok(())
-    }
-
-    // ---- The implementation for the extrinsic sudo_remove_network_connect_requirement.
-    // Args:
-    // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The caller, must be sudo.
-    //
-    // 	* `netuid_a` (u16):
-    // 		- The network we are removing the requirment from.
-    //
-    // 	* `netuid_b` (u16):
-    // 		- The required network connection to remove.
-    //   
-    pub fn do_sudo_remove_network_connection_requirement(
-        origin: T::RuntimeOrigin, 
-        netuid_a: u16,
-        netuid_b: u16,
-    ) -> dispatch::DispatchResult {
-        ensure_root( origin )?;
-        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
-        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
-        Self::remove_connection_requirment( netuid_a, netuid_b );
-        log::info!("NetworkConnectionRemoved( netuid_a:{:?}, netuid_b:{:?} )", netuid_a, netuid_b );
-        Self::deposit_event( Event::NetworkConnectionRemoved( netuid_a, netuid_b ) );
-        Ok(())
-    }
-
 
     // ---- The implementation for the extrinsic set_emission_values.
     //

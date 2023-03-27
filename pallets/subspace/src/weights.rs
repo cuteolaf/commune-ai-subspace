@@ -20,9 +20,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'values' ( Vec<u16> ):
     // 		- The values of the weights to set on the chain.
     //
-    // 	* 'version_key' ( u64 ):
-    // 		- The network version key.
-    //
+
     // # Event:
     // 	* WeightsSet;
     // 		- On successfully setting the weights on chain.
@@ -34,9 +32,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'NotRegistered':
     // 		- Attempting to set weights from a non registered account.
     //
-    // 	* 'IncorrectNetworkVersionKey':
-    // 		- Attempting to set weights without having an up-to-date version_key.
-    //
+
     // 	* 'SettingWeightsTooFast':
     // 		- Attempting to set weights faster than the weights_set_rate_limit.
     //
@@ -59,7 +55,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'MaxWeightExceeded':
     // 		- Attempting to set weights with max value exceeding limit.
     //
-    pub fn do_set_weights( origin: T::RuntimeOrigin, netuid: u16, uids: Vec<u16>, values: Vec<u16>, version_key:u64 ) -> dispatch::DispatchResult{
+    pub fn do_set_weights( origin: T::RuntimeOrigin, netuid: u16, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
 
         // --- 1. Check the caller's signature. This is the key of a registered account.
         let key = ensure_signed( origin )?;
@@ -76,10 +72,6 @@ impl<T: Config> Pallet<T> {
 
         // --- 5. Check to see if the key is registered to the passed network.
         ensure!( Self::is_key_registered_on_network( netuid, &key ), Error::<T>::NotRegistered );
-
-        // --- 6. Ensure version_key is up-to-date.
-        ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
-
         // --- 7. Get the neuron uid of associated key on network netuid.
         let neuron_uid;
         match Self::get_uid_for_net_and_key( netuid, &key ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
@@ -124,14 +116,7 @@ impl<T: Config> Pallet<T> {
     // ==========================
 	// ==== Helper functions ====
 	// ==========================
-    
-    // Returns true if version_key is up-to-date.
-    //
-    pub fn check_version_key( netuid: u16, version_key: u64) -> bool {
-        let network_version_key: u64 = WeightsVersionKey::<T>::get( netuid );
-        log::info!("check_version_key( network_version_key:{:?}, version_key:{:?} )", network_version_key, version_key );
-        return network_version_key == 0 || version_key == network_version_key;
-    }
+
 
     // Checks if the neuron has set weights within the weights_set_rate_limit.
     //

@@ -131,17 +131,6 @@ impl<T: Config> Pallet<T> {
 
 
 
-    pub fn get_weights_version_key( netuid: u16) -> u64 { WeightsVersionKey::<T>::get( netuid ) }
-    pub fn set_weights_version_key( netuid: u16, weights_version_key: u64 ) { WeightsVersionKey::<T>::insert( netuid, weights_version_key ); }
-    pub fn do_sudo_set_weights_version_key( origin: T::RuntimeOrigin, netuid: u16, weights_version_key: u64 ) -> DispatchResult { 
-        ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_weights_version_key( netuid, weights_version_key );
-        log::info!("WeightsVersionKeySet( netuid: {:?} weights_version_key: {:?} ) ", netuid, weights_version_key);
-        Self::deposit_event( Event::WeightsVersionKeySet( netuid, weights_version_key) );
-        Ok(()) 
-    }
-
     pub fn get_weights_set_rate_limit( netuid: u16) -> u64 { WeightsSetRateLimit::<T>::get( netuid ) }
     pub fn set_weights_set_rate_limit( netuid: u16, weights_set_rate_limit: u64 ) { WeightsSetRateLimit::<T>::insert( netuid, weights_set_rate_limit ); }
     pub fn do_sudo_set_weights_set_rate_limit( origin: T::RuntimeOrigin, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult { 

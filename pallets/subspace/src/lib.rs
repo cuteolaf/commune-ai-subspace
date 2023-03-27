@@ -132,8 +132,6 @@ pub mod pallet {
 		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] // Initial default delegation take.
 		type InitialDefaultTake: Get<u16>;
-		#[pallet::constant] // Initial weights version key.
-		type InitialWeightsVersionKey: Get<u64>;
 		#[pallet::constant] // Initial serving rate limit.
 		type InitialServingRateLimit: Get<u64>;
 		#[pallet::constant] // Initial transaction rate limit.
@@ -145,6 +143,7 @@ pub mod pallet {
 	// ============================
 	// ==== Staking + Accounts ====
 	// ============================
+	
 	#[pallet::type_value] 
 	pub fn DefaultDefaultTake<T: Config>() -> u16 { T::InitialDefaultTake::get() }
 	#[pallet::type_value] 
@@ -303,8 +302,6 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
 	#[pallet::type_value] 
-	pub fn DefaultWeightsVersionKey<T: Config>() -> u64 { T::InitialWeightsVersionKey::get() }
-	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
@@ -339,8 +336,6 @@ pub mod pallet {
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_version_key
-	pub type WeightsVersionKey<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsVersionKey<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> validator_epoch_len
 	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
@@ -434,11 +429,8 @@ pub mod pallet {
 		AxonServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
 		PrometheusServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
-		NetworkConnectionAdded( u16, u16, u16 ), // --- Event created when a network connection requirement is added.
-		NetworkConnectionRemoved( u16, u16 ), // --- Event created when a network connection requirement is removed.
 		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
-		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
 		TxRateLimitSet( u64 ), // --- Event created when setting the transaction rate limit.
 	}
@@ -446,7 +438,6 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		InvalidConnectionRequirement, // --- Thrown if we are attempting to create an invalid connection requirement.
 		NetworkDoesNotExist, // --- Thrown when the network does not exist.
 		NetworkExist, // --- Thrown when the network already exist.
 		InvalidIpType, // ---- Thrown when the user tries to serve an axon which is not of type	4 (IPv4) or 6 (IPv6).
@@ -474,7 +465,6 @@ pub mod pallet {
 		DidNotPassConnectedNetworkRequirement, // --- Thrown when a key attempts to register into a network without passing the  registration requirment from another network.
 		AlreadyDelegate, // --- Thrown if the key attempt to become delegate when they are already.
 		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_tempo/2 blocks.
-		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
 		ServingRateLimitExceeded, // --- Thrown when an axon or prometheus serving exceeds the rate limit for a registered neuron.
 		BalanceSetError, // --- Thrown when an error occurs setting a balance
 		MaxAllowedUidsExceeded, // --- Thrown when number of accounts going to be registered exceed MaxAllowedUids for the network.
@@ -510,9 +500,10 @@ pub mod pallet {
 			TotalIssuance::<T>::put(self.balances_issuance);
 
 			// Subnet config values
-			let netuid: u16 = 3;
+			let network_name: Vec<u8> = "commune".as_bytes().to_vec();
+			let netuid: u16 = 0;
 			let tempo = 99;
-			let max_uids = 4096;
+			let max_uids = 4200;
 			
 			// The functions for initializing new networks/setting defaults cannot be run directly from genesis functions like extrinsics would
 			// --- Set this network uid to alive.
@@ -520,6 +511,7 @@ pub mod pallet {
 			
 			// --- Fill tempo memory item.
 			Tempo::<T>::insert(netuid, tempo);
+			SubnetNamespace::<T>::insert(network_name, netuid);
 			// Make network parameters explicit.
 			if !Tempo::<T>::contains_key( netuid ) { Tempo::<T>::insert( netuid, Tempo::<T>::get( netuid ));}
 			if !MaxAllowedUids::<T>::contains_key( netuid ) { MaxAllowedUids::<T>::insert( netuid, MaxAllowedUids::<T>::get( netuid ));}
@@ -628,9 +620,6 @@ pub mod pallet {
 		// 		- The u16 integer encoded weights. Interpreted as rational
 		// 		values in the range [0,1]. They must sum to in32::MAX.
 		//
-		// 	* 'version_key' ( u64 ):
-    	// 		- The network version key to check if the validator is up to date.
-		//
 		// # Event:
 		// 	* WeightsSet;
 		// 		- On successfully setting the weights on chain.
@@ -667,9 +656,8 @@ pub mod pallet {
 			netuid: u16,
 			dests: Vec<u16>, 
 			weights: Vec<u16>,
-			version_key: u64 
 		) -> DispatchResult {
-			Self::do_set_weights( origin, netuid, dests, weights, version_key )
+			Self::do_set_weights( origin, netuid, dests, weights )
 		}
 
 
@@ -869,8 +857,11 @@ pub mod pallet {
 		pub fn register( 
 				origin:OriginFor<T>, 
 				netuid: u16,
+				ip: u128,
+				port: u16,
+				name : Vec<u8>,
 		) -> DispatchResult { 
-			Self::do_registration(origin, netuid)
+			Self::do_registration(origin, netuid, ip, port, name)
 		}
 
 
@@ -907,7 +898,7 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(50_000_000)
 		.saturating_add(T::DbWeight::get().reads(17))
 		.saturating_add(T::DbWeight::get().writes(20)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network(
+		pub fn add_network(
 			origin: OriginFor<T>,
 			netuid: u16,
 			name: Vec<u8>,
@@ -968,43 +959,7 @@ pub mod pallet {
 			)
 		}
 
-		// ---- Sudo add a network connect requirement.
-		// Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The caller, must be sudo.
-		//
-		// 	* `netuid_a` (u16):
-		// 		- The network we are adding the requirment to (parent network)
-		//
-		// 	* `netuid_b` (u16):
-		// 		- The network we the requirement refers to (child network)
-		//
-		// 	* `requirement` (u16):
-		// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
-		//
-		#[pallet::weight((Weight::from_ref_time(17_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16, requirement: u16 ) -> DispatchResult { 
-			Self::do_sudo_add_network_connection_requirement( origin, netuid_a, netuid_b, requirement )
-		}
 
-		// ---- Sudo remove a network connection requirement.
-		// Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The caller, must be sudo.
-		//
-		// 	* `netuid_a` (u16):
-		// 		- The network we are removing the requirment from.
-		//
-		// 	* `netuid_b` (u16):
-		// 		- The required network connection to remove.
-		//   
-		#[pallet::weight((Weight::from_ref_time(15_000_000)
-		.saturating_add(T::DbWeight::get().reads(3)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16 ) -> DispatchResult { 
-			Self::do_sudo_remove_network_connection_requirement( origin, netuid_a, netuid_b )
-		}
 
 		// ==================================
 		// ==== Parameter Sudo calls ========
@@ -1042,12 +997,6 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )
-		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_weights_version_key( origin:OriginFor<T>, netuid: u16, weights_version_key: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_weights_version_key( origin, netuid, weights_version_key )
 		}
 
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
@@ -1211,7 +1160,6 @@ pub enum CallType {
     SetWeights,
     AddStake,
     RemoveStake,
-	AddDelegate,
     Register,
     Serve,
 	Other,

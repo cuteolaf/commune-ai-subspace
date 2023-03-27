@@ -333,7 +333,6 @@ parameter_types! {
     pub const SubspaceInitialMaxRegistrationsPerBlock: u16 = 50;
     pub const SubspaceInitialPruningScore : u16 = u16::MAX;
     pub const SubspaceInitialDefaultTake: u16 = 11_796; // 18% honest number.
-    pub const SubspaceInitialWeightsVersionKey: u64 = 0;
     pub const SubspaceInitialServingRateLimit: u64 = 1000; 
 	pub const SubspaceInitialTxRateLimit: u64 = 1000;
 }
@@ -359,7 +358,6 @@ impl pallet_subspace::Config for Runtime {
 	type InitialPruningScore = SubspaceInitialPruningScore;
 	type InitialMaxAllowedValidators = SubspaceInitialMaxAllowedValidators;
 	type InitialDefaultTake = SubspaceInitialDefaultTake;
-	type InitialWeightsVersionKey = SubspaceInitialWeightsVersionKey;
 	type InitialServingRateLimit = SubspaceInitialServingRateLimit;
 	type InitialTxRateLimit = SubspaceInitialTxRateLimit;
 }

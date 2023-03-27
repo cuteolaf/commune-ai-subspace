@@ -114,7 +114,6 @@ benchmarks! {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = b"default".to_vec();
    
@@ -146,14 +145,13 @@ benchmarks! {
       weights.push(id.clone());
     }
 
-  }: set_weights(RawOrigin::Signed( signer.clone() ), netuid, dests, weights, version_key)
+  }: set_weights(RawOrigin::Signed( signer.clone() ), netuid, dests, weights)
 
 
   benchmark_add_stake {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = b"default".to_vec();
 
@@ -179,7 +177,6 @@ benchmarks! {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = b"default".to_vec();
 
@@ -312,16 +309,6 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
 
   }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_set_rate_limit)
-
-  benchmark_sudo_set_weights_version_key {
-    let netuid: u16 = 1; 
-    let weights_version_key: u64 = 1;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
-
-  }: sudo_set_weights_version_key(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_version_key)
 
 
   benchmark_sudo_set_max_allowed_validators {
