@@ -82,10 +82,6 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut active_stake );
         log::trace!( "S (mask+norm): {:?}", &active_stake );
 
-        // Get max allowed validators.
-        let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
-        log::trace!( "max_allowed_validators: {:?}", max_allowed_validators );
-
         // =============
         // == Weights ==
         // =============

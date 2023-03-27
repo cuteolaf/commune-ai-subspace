@@ -154,17 +154,6 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    pub fn get_validator_prune_len( netuid: u16 ) -> u64 { ValidatorPruneLen::<T>::get( netuid ) }
-    pub fn set_validator_prune_len( netuid: u16, validator_prune_len: u64 ) { ValidatorPruneLen::<T>::insert( netuid, validator_prune_len ); }
-    pub fn do_sudo_set_validator_prune_len( origin:T::RuntimeOrigin, netuid: u16, validator_prune_len: u64 ) -> DispatchResult {
-        ensure_root( origin )?;
-        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
-        Self::set_validator_prune_len(netuid, validator_prune_len);
-        log::info!("ValidatorPruneLenSet( netuid: {:?} validator_prune_len: {:?} ) ", netuid, validator_prune_len);
-		Self::deposit_event( Event::ValidatorPruneLenSet( netuid, validator_prune_len ));
-		Ok(())
-    }
-
 
     pub fn get_max_weight_limit( netuid: u16) -> u16 { MaxWeightsLimit::<T>::get( netuid ) }    
     pub fn set_max_weight_limit( netuid: u16, max_weight_limit: u16 ) { MaxWeightsLimit::<T>::insert( netuid, max_weight_limit ); }
@@ -188,31 +177,21 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn get_validator_epochs_per_reset( netuid: u16 )-> u16 { ValidatorEpochsPerReset::<T>::get( netuid ) }
-    pub fn set_validator_epochs_per_reset( netuid: u16, validator_epochs_per_reset: u16 ) { ValidatorEpochsPerReset::<T>::insert( netuid, validator_epochs_per_reset ); }
-    pub fn do_sudo_set_validator_epochs_per_reset( origin:T::RuntimeOrigin, netuid: u16, validator_epochs_per_reset: u16 ) -> DispatchResult {
-        ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_validator_epochs_per_reset( netuid, validator_epochs_per_reset );
-        log::info!("ValidatorEpochPerResetSet( netuid: {:?} validator_epochs_per_reset: {:?} ) ", netuid, validator_epochs_per_reset );
-        Self::deposit_event(Event::ValidatorEpochPerResetSet(netuid, validator_epochs_per_reset));
-        Ok(())
-    }
-
-
-    pub fn get_validator_epoch_length( netuid: u16 )-> u16 {ValidatorEpochLen::<T>::get( netuid ) }
-    pub fn set_validator_epoch_length( netuid: u16, validator_epoch_length: u16 ) { ValidatorEpochLen::<T>::insert( netuid, validator_epoch_length ); }
-    pub fn do_sudo_set_validator_epoch_length( origin:T::RuntimeOrigin, netuid: u16, validator_epoch_length: u16 ) -> DispatchResult {
-        ensure_root( origin )?; 
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        ValidatorEpochLen::<T>::insert( netuid, validator_epoch_length );
-        log::info!("ValidatorEpochLengthSet( netuid: {:?} validator_epoch_length: {:?} ) ", netuid, validator_epoch_length );
-        Self::deposit_event(Event::ValidatorEpochLengthSet(netuid, validator_epoch_length));
-        Ok(())
-    }
 
  
-    pub fn get_min_allowed_weights( netuid:u16 ) -> u16 { MinAllowedWeights::<T>::get( netuid ) }
+    pub fn get_min_allowed_weights( netuid:u16 ) -> u16 { 
+    
+        let mut min_allowed_weights: u16 = MinAllowedWeights::<T>::get( netuid );
+        let n : u16 = SubnetworkN::<T>::get(netuid);
+
+        if min_allowed_weights > n {
+            MinAllowedWeights::<T>::insert( netuid, n );
+            min_allowed_weights = n;
+        } 
+
+        return min_allowed_weights;
+    
+    }
     pub fn set_min_allowed_weights( netuid: u16, min_allowed_weights: u16 ) { MinAllowedWeights::<T>::insert( netuid, min_allowed_weights ); }
     pub fn do_sudo_set_min_allowed_weights( origin:T::RuntimeOrigin, netuid: u16, min_allowed_weights: u16 ) -> DispatchResult {
         ensure_root( origin )?;
@@ -260,18 +239,6 @@ impl<T: Config> Pallet<T> {
     }
 
 
-
-            
-    pub fn get_max_allowed_validators( netuid: u16 ) -> u16  { MaxAllowedValidators::<T>::get( netuid ) }
-    pub fn set_max_allowed_validators( netuid: u16, max_allowed_validators: u16 ) { MaxAllowedValidators::<T>::insert( netuid, max_allowed_validators ); }
-    pub fn do_sudo_set_max_allowed_validators( origin:T::RuntimeOrigin, netuid: u16, max_allowed_validators: u16 ) -> DispatchResult {
-        ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_max_allowed_validators( netuid, max_allowed_validators );
-        log::info!("MaxAllowedValidatorsSet( netuid: {:?} max_allowed_validators: {:?} ) ", netuid, max_allowed_validators );
-        Self::deposit_event( Event::MaxAllowedValidatorsSet( netuid, max_allowed_validators ) );
-        Ok(())
-    }
 
 
     pub fn get_max_registrations_per_block( netuid: u16 ) -> u16 { MaxRegistrationsPerBlock::<T>::get( netuid ) }

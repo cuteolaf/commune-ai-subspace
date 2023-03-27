@@ -207,9 +207,7 @@ impl<T: Config> Pallet<T> {
         if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
         if !EmissionValues::<T>::contains_key( netuid ) { EmissionValues::<T>::insert( netuid, EmissionValues::<T>::get( netuid ));}   
         if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
-        if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
         if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
-        if !ValidatorEpochsPerReset::<T>::contains_key( netuid ) { ValidatorEpochsPerReset::<T>::insert( netuid, ValidatorEpochsPerReset::<T>::get( netuid ));}
         if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
     }
 
@@ -238,9 +236,7 @@ impl<T: Config> Pallet<T> {
         ActivityCutoff::<T>::remove( netuid );
         EmissionValues::<T>::remove( netuid );
         MaxWeightsLimit::<T>::remove( netuid );
-        ValidatorEpochLen::<T>::remove( netuid );
         MinAllowedWeights::<T>::remove( netuid );
-        ValidatorEpochsPerReset::<T>::remove( netuid );
         RegistrationsThisInterval::<T>::remove( netuid );
         
     }

@@ -274,15 +274,6 @@ benchmarks! {
   }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_set_rate_limit)
 
 
-  benchmark_sudo_set_max_allowed_validators {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let max_allowed_validators: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
-
-  }: sudo_set_max_allowed_validators(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_allowed_validators)
 
 
   benchmark_sudo_set_adjustment_interval {
@@ -336,27 +327,6 @@ benchmarks! {
 
   }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, netuid, min_allowed_weights)
 
-  benchmark_sudo_set_validator_epochs_per_reset {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let validator_epochs_per_reset: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
-
-  }: sudo_set_validator_epochs_per_reset(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_epochs_per_reset)
-
-
-  benchmark_sudo_set_validator_prune_len {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let validator_prune_len: u64 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), netuid.try_into().unwrap()));
-
-  }: sudo_set_validator_prune_len(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_prune_len)
-
 
   benchmark_sudo_set_immunity_period {
     let netuid: u16 = 1;
@@ -387,14 +357,5 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(),  name.into(), tempo.into()));
 
   }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_registrations_per_block)
-
-  benchmark_sudo_set_validator_epoch_length {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let validator_epoch_len: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(),  name.into(), tempo.into()));
-
-  }: sudo_set_validator_epoch_len(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_epoch_len)
 
 

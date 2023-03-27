@@ -112,14 +112,6 @@ pub mod pallet {
 		type InitialTargetRegistrationsPerInterval: Get<u16>;
 		#[pallet::constant] // Max UID constant.
 		type InitialMaxAllowedUids: Get<u16>;
-		#[pallet::constant] // Default Epoch length.
-		type InitialValidatorEpochLen: Get<u16>;
-		#[pallet::constant] // Default Reset length.
-		type InitialValidatorEpochsPerReset: Get<u16>;
-		#[pallet::constant] // Initial validator exclude quantile.
-		type InitialValidatorExcludeQuantile: Get<u16>;
-		#[pallet::constant] // Initial validator context pruning length.
-		type InitialValidatorPruneLen: Get<u64>; 
 		#[pallet::constant] // Immunity Period Constant.
 		type InitialImmunityPeriod: Get<u16>;
 		#[pallet::constant] // Activity constant
@@ -128,8 +120,6 @@ pub mod pallet {
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
 		#[pallet::constant] // Initial pruning score for each neuron
 		type InitialPruningScore: Get<u16>;	
-		#[pallet::constant] // Initial allowed validators per network.
-		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] // Initial default delegation take.
 		type InitialDefaultTake: Get<u16>;
 		#[pallet::constant] // Initial serving rate limit.
@@ -288,16 +278,8 @@ pub mod pallet {
 	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
-	#[pallet::type_value] 
-	pub fn DefaultMaxAllowedValidators<T: Config>() -> u16 { T::InitialMaxAllowedValidators::get() }
 	#[pallet::type_value]
 	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorPruneLen<T: Config>() -> u64 { T::InitialValidatorPruneLen::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
@@ -321,20 +303,12 @@ pub mod pallet {
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> validator_epoch_len
-	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_validators
-	pub type MaxAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedValidators<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> validator_prune_len
-	pub type ValidatorPruneLen<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultValidatorPruneLen<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> validator_epochs_per_reset
-	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> target_registrations_this_interval
 	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> block_at_registration
@@ -405,12 +379,8 @@ pub mod pallet {
 		MaxRegistrationsPerBlockSet( u16, u16), // --- Event created when we set max registrations per block
 		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
-		ValidatorEpochPerResetSet( u16, u16 ), // --- Event created when validator epoch per reset is set for a subnet.
-		ValidatorEpochLengthSet( u16, u16 ), // --- Event created when the validator epoch length has been set for a subnet.
-		ValidatorPruneLenSet( u16, u64 ), // --- Event created when the validator pruning length has been set.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
-		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
 		AxonServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
@@ -930,13 +900,6 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_validators( origin:OriginFor<T>, netuid: u16, max_allowed_validators: u16 ) -> DispatchResult {  
-			Self::do_sudo_set_max_allowed_validators( origin, netuid, max_allowed_validators )
-		}
-
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>, netuid: u16, adjustment_interval: u16 ) -> DispatchResult { 
 			Self::do_sudo_set_adjustment_interval( origin, netuid, adjustment_interval )
 		}
@@ -966,18 +929,6 @@ pub mod pallet {
 			Self::do_sudo_set_min_allowed_weights( origin, netuid, min_allowed_weights )
 		}
 
-		#[pallet::weight((Weight::from_ref_time(13_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_epochs_per_reset( origin:OriginFor<T>, netuid: u16, validator_epochs_per_reset: u16 ) -> DispatchResult {
-			Self::do_sudo_set_validator_epochs_per_reset( origin, netuid, validator_epochs_per_reset )
-		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_epoch_len( origin:OriginFor<T>, netuid: u16,validator_epoch_length: u16 ) -> DispatchResult {
-			Self::do_sudo_set_validator_epoch_length( origin, netuid, validator_epoch_length )
-		}
 
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
@@ -1018,7 +969,6 @@ pub mod pallet {
 		pub fn create_network_with_weights( _: OriginFor<T>, name: Vec<u8>, n: u16, tempo: u16, n_vals: u16, n_weights: u16 ) -> DispatchResult {
 			let netuid: u16 = Self::init_new_network( name, tempo );
 			Self::set_max_allowed_uids( netuid, n );
-			Self::set_max_allowed_validators( netuid, n_vals );
 			Self::set_min_allowed_weights( netuid, n_weights );
 			Self::set_emission_for_network( netuid, 1_000_000_000 );
 			let mut seed : u32 = 1;
