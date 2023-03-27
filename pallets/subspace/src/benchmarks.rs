@@ -216,21 +216,6 @@ benchmarks! {
 
   }: serve_axon(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
-  benchmark_serve_prometheus {
-    let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
-    let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
-    let netuid: u16 = 1;
-    let version: u32 = 2;
-    let ip: u128 = 1676056785;
-    let port: u16 = 128;
-    let ip_type: u8 = 4;
-    
-
-    Subspace::<T>::set_serving_rate_limit(netuid, 0);
-
-  }: serve_prometheus(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type)
-
-
   benchmark_sudo_add_network {
     let netuid: u16 = 1;
     let tempo: u16 = 1;
@@ -253,41 +238,19 @@ benchmarks! {
     let netuids: Vec<u16> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     let emission: Vec<u64> = vec![100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000];
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 0, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 1, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 2, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 4, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 5, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 6, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 7, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 8, name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), 9, name.into(), tempo.into())); 
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into()));
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), tempo.into())); 
 
   }: sudo_set_emission_values(RawOrigin::<AccountIdOf<T>>::Root, netuids, emission)
 
-  benchmark_sudo_add_network_connection_requirement {
-    let netuid_a: u16 = 1; 
-    let netuid_b: u16 = 2; 
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let requirement: u16 = 1;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid_a.try_into().unwrap(), name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid_b.try_into().unwrap(), name.into(), tempo.into()));
-
-  }: sudo_add_network_connection_requirement(RawOrigin::<AccountIdOf<T>>::Root, netuid_a, netuid_b, requirement)
-
-  benchmark_sudo_remove_network_connection_requirement {
-    let netuid_a: u16 = 1; 
-    let netuid_b: u16 = 2; 
-    let tempo: u16 = 1;
-    let name: Vec<u8> = b"default".to_vec();
-    let requirement: u16 = 1;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid_a.try_into().unwrap(), name.into(), tempo.into()));
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid_b.try_into().unwrap(), name.into(), tempo.into()));
-
-  }: sudo_remove_network_connection_requirement(RawOrigin::<AccountIdOf<T>>::Root, netuid_a, netuid_b)
 
   benchmark_sudo_set_default_take {
     let default_take: u16 = 100; 

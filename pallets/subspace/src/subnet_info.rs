@@ -17,7 +17,7 @@ pub struct SubnetInfo {
     max_allowed_uids: Compact<u16>,
     blocks_since_last_step: Compact<u64>,
     tempo: Compact<u16>,
-    emission_values: Compact<u64>,
+    emission_values: Compact<u64>
 }
 
 impl<T: Config> Pallet<T> {
@@ -35,6 +35,7 @@ impl<T: Config> Pallet<T> {
         let blocks_since_last_step = Self::get_blocks_since_last_step(netuid);
         let tempo = Self::get_tempo(netuid);
         let emission_values = Self::get_emission_value(netuid);
+        
 
 
 

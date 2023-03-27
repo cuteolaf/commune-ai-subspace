@@ -63,16 +63,16 @@ impl<T: Config> Pallet<T> {
         name: Vec<u8>,
     ) -> dispatch::DispatchResult {
         // --- 1. We check the callers (key) signature.
-        let key_id = ensure_signed(origin)?;
+        let key = ensure_signed(origin)?;
 
         // --- 2. Ensure the key is registered somewhere.
-        ensure!( Self::is_key_registered_on_any_network( &key_id ), Error::<T>::NotRegistered );  
+        ensure!( Self::is_key_registered_on_any_network( &key ), Error::<T>::NotRegistered );  
         
         // --- 3. Check the ip signature validity.
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpAddress );
   
         // --- 4. Get the previous axon information.
-        let mut prev_axon = Self::get_axon_info( netuid, &key_id );
+        let mut prev_axon = Self::get_axon_info( netuid, &key );
         let current_block:u64 = Self::get_current_block_as_u64();
         ensure!( Self::axon_passes_rate_limit( netuid, &prev_axon, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
@@ -81,57 +81,17 @@ impl<T: Config> Pallet<T> {
         prev_axon.ip = ip;
         prev_axon.port = port;
         prev_axon.name = name.clone();
-        Axons::<T>::insert( netuid, key_id.clone(), prev_axon.clone() );
-        AxonNamespace::<T>::insert( netuid, name.clone(), prev_axon.clone() );
+        Axons::<T>::insert( netuid, key.clone(), prev_axon.clone() );
+        let uid = Self::get_uid_for_net_and_key(netuid, &key.clone()).unwrap();
+        AxonNamespace::<T>::insert( netuid, uid.clone(), name.clone() );
         // --- 7. We deposit axon served event.
-        log::info!("AxonServed( key:{:?} ) ", key_id.clone() );
-        Self::deposit_event(Event::AxonServed( netuid, key_id ));
+        log::info!("AxonServed( key:{:?} ) ", key.clone() );
+        Self::deposit_event(Event::AxonServed( netuid, key ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
     }
 
-    // ---- The implementation for the extrinsic serve_prometheus.
-    //
-    // # Args:
-    // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the caller.
-    //
-    // 	* 'netuid' (u16):
-    // 		- The u16 network identifier.
-    //
-    // 	* 'version' (u64):
-    // 		- The bittensor version identifier.
-    //
-    // 	* 'ip' (u64):
-    // 		- The prometheus ip information as a u128 encoded integer.
-    //
-    // 	* 'port' (u16):
-    // 		- The prometheus port information as a u16 encoded integer.
-    // 
-    // 	* 'ip_type' (u8):
-    // 		- The prometheus ip version as a u8, 4 or 6.
-    //
-    // # Event:
-    // 	* PrometheusServed;
-    // 		- On successfully serving the axon info.
-    //
-    // # Raises:
-    // 	* 'NetworkDoesNotExist':
-    // 		- Attempting to set weights on a non-existent network.
-    //
-    // 	* 'NotRegistered':
-    // 		- Attempting to set weights from a non registered account.
-    //
-    // 	* 'InvalidIpType':
-    // 		- The ip type is not 4 or 6.
-    //
-    // 	* 'InvalidIpAddress':
-    // 		- The numerically encoded ip address does not resolve to a proper ip.
-    //
-    // 	* 'ServingRateLimitExceeded':
-    // 		- Attempting to set prometheus information withing the rate limit min.
-    //
 
     /********************************
      --==[[  Helper functions   ]]==--
@@ -149,10 +109,6 @@ impl<T: Config> Pallet<T> {
         return Axons::<T>::contains_key( netuid, key );
     }
 
-    pub fn has_prometheus_info( netuid: u16, key: &T::AccountId ) -> bool {
-        return Prometheus::<T>::contains_key( netuid, key );
-    }
-
     pub fn get_axon_info( netuid: u16, key: &T::AccountId ) -> AxonInfoOf {
         if Self::has_axon_info( netuid, key ) {
             return Axons::<T>::get( netuid, key ).unwrap();
@@ -162,21 +118,6 @@ impl<T: Config> Pallet<T> {
                 ip: 0,
                 port: 0,
                 name: vec![],
-            }
-
-        }
-    }
-
-    pub fn get_prometheus_info( netuid: u16, key: &T::AccountId ) -> PrometheusInfoOf {
-        if Self::has_prometheus_info( netuid, key ) {
-            return Prometheus::<T>::get( netuid, key ).unwrap();
-        } else {
-            return PrometheusInfo { 
-                block: 0,
-                version: 0,
-                ip: 0,
-                port: 0,
-                ip_type: 0,
             }
 
         }

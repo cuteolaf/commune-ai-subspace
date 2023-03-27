@@ -167,10 +167,6 @@ pub mod pallet {
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a key.
     pub type TotalKeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> cold | Returns the controlling coldkey for a key.
-    pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> take | Returns the key delegation take. And signals that this key is open for delegation.
-    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultDefaultTake<T>>;
 	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
 	pub type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
@@ -253,16 +249,7 @@ pub mod pallet {
         pub name: Vec<u8>, // --- Axon ip type, 4 for ipv4 and 6 for ipv6.
 	}
 
-	// --- Struct for Prometheus.
-	pub type PrometheusInfoOf = PrometheusInfo;
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-	pub struct PrometheusInfo {
-		pub block: u64, // --- Prometheus serving block.
-        pub version: u32, // --- Prometheus version.
-        pub ip: u128, // --- Prometheus u128 encoded ip address of type v6 or v4.
-        pub port: u16, // --- Prometheus u16 encoded port.
-        pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
-	}
+
 
 	// Rate limiting
 	#[pallet::type_value]
@@ -283,8 +270,6 @@ pub mod pallet {
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
 	#[pallet::storage] // --- MAP ( netuid, key ) --> axon_info
 	pub(super) type Axons<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, AxonInfoOf, OptionQuery>;
-	#[pallet::storage] // --- MAP ( netuid, key ) --> prometheus_info
-	pub(super) type Prometheus<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, PrometheusInfoOf, OptionQuery>;
 
 	// =======================================
 	// ==== Subnetwork Hyperparam storage ====
@@ -317,10 +302,10 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 	#[pallet::storage]
-	pub type AxonNamespace<T: Config> = StorageDoubleMap<_, Twox64Concat, u16, Twox64Concat, Vec<u8>, AxonInfo, ValueQuery>;
+	pub type AxonNamespace<T: Config> = StorageDoubleMap<_, Twox64Concat, u16, Twox64Concat, u16, Vec<u8>, ValueQuery>;
 	
 	#[pallet::storage] // --- MAP ( name: Vec<u8> ) --> weights_set_rate_limit
-	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>, u16, ValueQuery>;
+	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, u16, Vec<u8>, ValueQuery>;
 
 	#[pallet::storage] // --- MAP ( netuid ) --> uid, we use to record uids to prune at next epoch.
     pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
@@ -427,9 +412,7 @@ pub mod pallet {
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
 		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
 		AxonServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
-		PrometheusServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
-		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
 		TxRateLimitSet( u64 ), // --- Event created when setting the transaction rate limit.
@@ -463,7 +446,6 @@ pub mod pallet {
 		EmissionValuesDoesNotMatchNetworks, // --- Thrown when number or recieved emission rates does not match number of networks
 		InvalidEmissionValues, // --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		DidNotPassConnectedNetworkRequirement, // --- Thrown when a key attempts to register into a network without passing the  registration requirment from another network.
-		AlreadyDelegate, // --- Thrown if the key attempt to become delegate when they are already.
 		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_tempo/2 blocks.
 		ServingRateLimitExceeded, // --- Thrown when an axon or prometheus serving exceeds the rate limit for a registered neuron.
 		BalanceSetError, // --- Thrown when an error occurs setting a balance
@@ -499,72 +481,19 @@ pub mod pallet {
 			// Set initial total issuance from balances
 			TotalIssuance::<T>::put(self.balances_issuance);
 
-			// Subnet config values
-			let network_name: Vec<u8> = "commune".as_bytes().to_vec();
-			let netuid: u16 = 0;
-			let tempo = 99;
-			let max_uids = 4200;
-			
-			// The functions for initializing new networks/setting defaults cannot be run directly from genesis functions like extrinsics would
-			// --- Set this network uid to alive.
-			NetworksAdded::<T>::insert(netuid, true);
-			
-			// --- Fill tempo memory item.
-			Tempo::<T>::insert(netuid, tempo);
-			SubnetNamespace::<T>::insert(network_name, netuid);
-			// Make network parameters explicit.
-			if !Tempo::<T>::contains_key( netuid ) { Tempo::<T>::insert( netuid, Tempo::<T>::get( netuid ));}
-			if !MaxAllowedUids::<T>::contains_key( netuid ) { MaxAllowedUids::<T>::insert( netuid, MaxAllowedUids::<T>::get( netuid ));}
-			if !ImmunityPeriod::<T>::contains_key( netuid ) { ImmunityPeriod::<T>::insert( netuid, ImmunityPeriod::<T>::get( netuid ));}
-			if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
-			if !EmissionValues::<T>::contains_key( netuid ) { EmissionValues::<T>::insert( netuid, EmissionValues::<T>::get( netuid ));}   
-			if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
-			if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
-			if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
-			if !ValidatorEpochsPerReset::<T>::contains_key( netuid ) { ValidatorEpochsPerReset::<T>::insert( netuid, ValidatorEpochsPerReset::<T>::get( netuid ));}
-			if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
+			// iterationt through list of networks
+			let network_list = vec!["commune".as_bytes().to_vec(), 
+												"text".as_bytes().to_vec(), 
+												"image".as_bytes().to_vec()];
 
-			// Set max allowed uids
-			MaxAllowedUids::<T>::insert(netuid, max_uids);
 
-			let mut next_uid = 0;
+			for network_name in network_list.iter()  {
+				let tempo = 99;
+				let netuid = Pallet::<T>::init_new_network(network_name.clone(), tempo);
 
-			for (coldkey, keys) in self.stakes.iter() {
-				for (key, stake_uid) in keys.iter() {
-					let (stake, uid) = stake_uid;
-
-					// Expand Yuma with new position.
-					Rank::<T>::mutate(netuid, |v| v.push(0));
-					Active::<T>::mutate(netuid, |v| v.push(true));
-					Emission::<T>::mutate(netuid, |v| v.push(0));
-					Incentive::<T>::mutate(netuid, |v| v.push(0));
-					Dividends::<T>::mutate(netuid, |v| v.push(0));
-					LastUpdate::<T>::mutate(netuid, |v| v.push(0));
-					PruningScores::<T>::mutate(netuid, |v| v.push(0));
-			
-					// Insert account information.
-					Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.
-					Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
-					BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
-					IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
-
-					TotalKeyStake::<T>::insert(key.clone(), stake);
-
-					// Update total issuance value
-					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
-	
-					Stake::<T>::insert(key.clone(),  stake);
-	
-					next_uid += 1;
-				}
-			}
-
-	 	 	// Set correct length for Subnet neurons
-			SubnetworkN::<T>::insert(netuid, next_uid);
-
-			// --- Increase total network count.
-			TotalNetworks::<T>::mutate(|n| *n += 1);
-		}
+				// Set initial total issuance from balances}
+	}
+	}
 	}
 
 	// ================
@@ -900,11 +829,10 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(20)), DispatchClass::Operational, Pays::No))]
 		pub fn add_network(
 			origin: OriginFor<T>,
-			netuid: u16,
 			name: Vec<u8>,
 			tempo: u16,
 		) -> DispatchResultWithPostInfo {
-			Self::do_add_network(origin, netuid, name,tempo)
+			Self::do_add_network(origin, name,tempo)
 		}
 
 		// ---- Sudo remove a network from the network set.
@@ -1073,8 +1001,8 @@ pub mod pallet {
 
 		// Benchmarking functions.
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn create_network( _: OriginFor<T>, netuid: u16, name: Vec<u8>, n: u16, tempo: u16 ) -> DispatchResult {
-			Self::init_new_network( netuid, name,  tempo );
+		pub fn create_network( _: OriginFor<T>,name: Vec<u8>, n: u16, tempo: u16 ) -> DispatchResult {
+			let netuid: u16 = Self::init_new_network(  name,  tempo );
 			Self::set_max_allowed_uids( netuid, n );
 			let mut seed : u32 = 1;
 			for _ in 0..n {
@@ -1087,8 +1015,8 @@ pub mod pallet {
 		}
 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn create_network_with_weights( _: OriginFor<T>, netuid: u16, name: Vec<u8>, n: u16, tempo: u16, n_vals: u16, n_weights: u16 ) -> DispatchResult {
-			Self::init_new_network( netuid, name, tempo );
+		pub fn create_network_with_weights( _: OriginFor<T>, name: Vec<u8>, n: u16, tempo: u16, n_vals: u16, n_weights: u16 ) -> DispatchResult {
+			let netuid: u16 = Self::init_new_network( name, tempo );
 			Self::set_max_allowed_uids( netuid, n );
 			Self::set_max_allowed_validators( netuid, n_vals );
 			Self::set_min_allowed_weights( netuid, n_weights );

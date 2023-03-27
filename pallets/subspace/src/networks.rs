@@ -35,7 +35,6 @@ impl<T: Config> Pallet<T> {
     
     pub fn do_add_network( 
         origin: T::RuntimeOrigin, 
-        netuid: u16, 
         name: Vec<u8>,
         tempo: u16, 
     ) -> dispatch::DispatchResultWithPostInfo {
@@ -43,6 +42,7 @@ impl<T: Config> Pallet<T> {
         // --- 1. Ensure this is a sudo caller.
         ensure_root( origin )?;
 
+        let netuid = Self::init_new_network( name.clone(), tempo );
         // --- 2. Ensure this subnetwork does not already exist.
         ensure!( !Self::if_subnet_exist( netuid ), Error::<T>::NetworkExist );
 
@@ -50,7 +50,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_tempo_is_valid( tempo ), Error::<T>::InvalidTempo );
 
         // --- 5. Initialize the network and all its parameters.
-        Self::init_new_network( netuid, name.clone(), tempo );
+        
         
         // --- 6. Emit the new network event.
         log::info!("NetworkAdded( netuid:{:?}, name:{:?} )", netuid, name.clone());
@@ -154,9 +154,13 @@ impl<T: Config> Pallet<T> {
 
     // Initializes a new subnetwork under netuid with parameters.
     //
-    pub fn init_new_network( netuid:u16, name: Vec<u8>, tempo:u16){
+    pub fn init_new_network(  name: Vec<u8>, tempo:u16) -> u16{
 
-        // --- 1. Set network to 0 size.
+        
+        // --- 5. Increase total network count.
+        TotalNetworks::<T>::mutate( |n| *n += 1 );
+        let netuid = TotalNetworks::<T>::get();
+
         SubnetworkN::<T>::insert( netuid, 0 );
 
         // --- 2. Set this network uid to alive.
@@ -165,14 +169,13 @@ impl<T: Config> Pallet<T> {
         // --- 3. Fill tempo memory item.
         Tempo::<T>::insert( netuid, tempo );
 
-        // --- 5. Increase total network count.
-        TotalNetworks::<T>::mutate( |n| *n += 1 );
-
         // --- 6. Set all default values **explicitly**.
-        SubnetNamespace::<T>::insert( name, netuid );
+        SubnetNamespace::<T>::insert( netuid, name.clone() );
 
         // --- 6. Set all default values **explicitly**.
         Self::set_default_values_for_all_parameters( netuid );
+
+        return netuid;
     }
 
     // Removes the network (netuid) and all of its parameters.
@@ -239,36 +242,7 @@ impl<T: Config> Pallet<T> {
         MinAllowedWeights::<T>::remove( netuid );
         ValidatorEpochsPerReset::<T>::remove( netuid );
         RegistrationsThisInterval::<T>::remove( netuid );
-    }
-
-
-    // --- Returns true if a network connection exists.
-    //
-    pub fn network_connection_requirement_exists( netuid_a: u16, netuid_b: u16 ) -> bool {
-        NetworkConnect::<T>::contains_key( netuid_a, netuid_b )
-    }
-
-    // --- Returns the network connection requirment between net A and net B.
-    //
-    pub fn get_network_connection_requirement( netuid_a: u16, netuid_b: u16 ) -> u16 {
-        if Self::network_connection_requirement_exists( netuid_a, netuid_b ){
-            return NetworkConnect::<T>::get( netuid_a, netuid_b ).unwrap();
-        } else {
-            // Should never occur.
-            return u16::MAX;
-        }
-    }
-
-    // --- Adds a network b connection requirement to network a. 
-    //
-    pub fn add_connection_requirement( netuid_a: u16, netuid_b: u16, requirement: u16 ) {
-        NetworkConnect::<T>::insert( netuid_a, netuid_b, requirement );
-    }
-
-    // --- Removes the network b connection requirement from network a. 
-    //
-    pub fn remove_connection_requirment( netuid_a: u16, netuid_b: u16) {
-        if Self::network_connection_requirement_exists(netuid_a, netuid_b) { NetworkConnect::<T>::remove( netuid_a, netuid_b ); }
+        
     }
 
     // Returns true if the items contain duplicates.
@@ -312,7 +286,6 @@ impl<T: Config> Pallet<T> {
     pub fn if_subnet_exist( netuid: u16 ) -> bool{
         return NetworksAdded::<T>::get( netuid );
     }
-
 
     // Returns true if the passed tempo is allowed.
     //
