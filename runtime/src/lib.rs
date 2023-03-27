@@ -317,7 +317,7 @@ impl pallet_sudo::Config for Runtime {
 parameter_types! {
     pub const SubspaceInitialMaxAllowedUids: u16 = 512;
     pub const SubspaceInitialIssuance: u64 = 0;
-    pub const SubspaceInitialMinAllowedWeights: u16 = 1024;
+    pub const SubspaceInitialMinAllowedWeights: u16 = 1;
     pub const SubspaceInitialEmissionValue: u16 = 0;
     pub const SubspaceInitialMaxWeightsLimit: u16 = 262;
     pub const SubspaceInitialValidatorEpochLen: u16 = 100;
