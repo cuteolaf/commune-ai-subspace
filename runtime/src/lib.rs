@@ -124,7 +124,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// up by `pallet_aura` to implement `fn slot_duration()`.
 ///
 /// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
+pub const MILLISECS_PER_BLOCK: u64 = 2000;
 
 // NOTE: Currently it is not possible to change the slot duration after the chain has started.
 //       Attempting to do so will brick block production.
@@ -319,7 +319,7 @@ parameter_types! {
     pub const SubspaceInitialIssuance: u64 = 0;
     pub const SubspaceInitialMinAllowedWeights: u16 = 1;
     pub const SubspaceInitialEmissionValue: u16 = 0;
-    pub const SubspaceInitialMaxWeightsLimit: u16 = 262;
+    pub const SubspaceInitialMaxWeightsLimit: u16 = u16::MAX;
     pub const SubspaceInitialTempo: u16 = 0;
     pub const SubspaceInitialAdjustmentInterval: u16 = 100;
     pub const SubspaceInitialTargetRegistrationsPerInterval: u16 = 2;
