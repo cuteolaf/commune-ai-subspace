@@ -48,7 +48,6 @@ impl<T: Config> Pallet<T> {
 
     pub fn do_registration( 
         origin: T::RuntimeOrigin,
-        netuid: u16,
         ip: u128, 
         port: u16, 
         name: Vec<u8>,
@@ -58,21 +57,14 @@ impl<T: Config> Pallet<T> {
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
         let key = ensure_signed( origin.clone() )?;        
-        log::info!("do_registration( key:{:?} netuid:{:?} )", key, netuid );
-
-
-        // --- 2. Ensure the passed network is valid.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
-
-        // --- 3. Ensure we are not exceeding the max allowed registrations per block.
-        ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registrations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
+        log::info!("do_registration( key:{:?} )", key );
 
         // --- 4. Ensure that the key is not already registered.
         let already_registered: bool  = Uids::<T>::contains_key( netuid, &key ); 
 
         let current_block_number: u64 = Self::get_current_block_as_u64();
         let mut uid: u16;
-        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        let current_subnetwork_n: u16 = Self::get_n();
 
         if !already_registered {
             // If the network account does not exist we will create it here.
@@ -156,8 +148,8 @@ impl<T: Config> Pallet<T> {
         let mut min_score_in_immunity_period = u16::MAX;
         let mut uid_with_min_score = 0;
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
-        if Self::get_subnetwork_n( netuid ) == 0 { return 0 } // If there are no neurons in this network.
-        for neuron_uid_i in 0..Self::get_subnetwork_n( netuid ) {
+        if Self::get_n() == 0 { return 0 } // If there are no neurons in this network.
+        for neuron_uid_i in 0..Self::get_n() {
             let pruning_score:u16 = Self::get_pruning_score_for_uid( netuid, neuron_uid_i );
             let block_at_registration: u64 = Self::get_neuron_block_at_registration( netuid, neuron_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
@@ -189,14 +181,14 @@ impl<T: Config> Pallet<T> {
             }
         }
         if min_score == u16::MAX { //all neuorns are in immunity period
-            Self::set_pruning_score_for_uid( netuid, uid_with_min_score_in_immunity_period, u16::MAX );
+            Self::set_pruning_score_for_uid(  uid_with_min_score_in_immunity_period, u16::MAX );
             return uid_with_min_score_in_immunity_period;
         }
         else {
             // We replace the pruning score here with u16 max to ensure that all peers always have a 
             // pruning score. In the event that every peer has been pruned this function will prune
             // the last element in the network continually.
-            Self::set_pruning_score_for_uid( netuid, uid_with_min_score, u16::MAX );
+            Self::set_pruning_score_for_uid( uid_with_min_score, u16::MAX );
             return uid_with_min_score;
         }
     } 
@@ -268,7 +260,6 @@ impl<T: Config> Pallet<T> {
     //
     pub fn do_serve_neuron( 
         origin: T::RuntimeOrigin, 
-		netuid: u16,
         ip: u128, 
         port: u16, 
         name: Vec<u8>,
@@ -280,11 +271,9 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::is_key_registered_on_any_network( &key ), Error::<T>::NotRegistered );  
         
         // --- 4. Get the previous neuron information.
-        let mut prev_neuron = Self::get_neuron_info( netuid, &key );  
+        let mut prev_neuron = Self::get_neuron_info( &key );  
         let current_block: u64 = Self::get_current_block_as_u64(); 
-        
-        ensure!( Self::neuron_passes_rate_limit( netuid, &prev_neuron, current_block ), Error::<T>::ServingRateLimitExceeded );  
-    
+            
         if prev_neuron.name.len() > 0 {
             let old_name = prev_neuron.name.clone();
             NeuronNamespace::<T>::remove( netuid, old_name.clone() );
@@ -299,11 +288,11 @@ impl<T: Config> Pallet<T> {
         prev_neuron.context = context.clone();
         prev_neuron.block = current_block;
 
-        Neurons::<T>::insert( netuid, key.clone(), prev_neuron.clone() );
+        Neurons::<T>::insert( key.clone(), prev_neuron.clone() );
 
         // --- 7. We deposit neuron served event.
         log::info!("NeuronServed( key:{:?} ) ", key.clone() );
-        Self::deposit_event(Event::NeuronServed( netuid, key.clone() ));
+        Self::deposit_event(Event::NeuronServed( key.clone() ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -311,7 +300,6 @@ impl<T: Config> Pallet<T> {
 
     pub fn do_update_neuron( 
         origin: T::RuntimeOrigin, 
-		netuid: u16,
         ip: u128, 
         port: u16, 
         name: Vec<u8>,
@@ -323,26 +311,28 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::is_key_registered_on_any_network( &key ), Error::<T>::NotRegistered );  
         
         // --- 4. Get the previous neuron information.
-        let mut prev_neuron = Self::get_neuron_info( netuid, &key );  
+        let mut prev_neuron = Self::get_neuron_info( &key );  
         let current_block: u64 = Self::get_current_block_as_u64(); 
         
-        ensure!( Self::neuron_passes_rate_limit( netuid, &prev_neuron, current_block ), Error::<T>::ServingRateLimitExceeded );  
+        ensure!( Self::neuron_passes_rate_limit(  &prev_neuron, current_block ), Error::<T>::ServingRateLimitExceeded );  
     
         if prev_neuron.name.len() > 0 {
             let old_name = prev_neuron.name.clone();
-            NeuronNamespace::<T>::remove( netuid, old_name.clone() );
+            NeuronNamespace::<T>::remove( old_name.clone() );
         } 
-        ensure!(!Self::name_exists(netuid, name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
-        NeuronNamespace::<T>::insert( netuid, name.clone(), key.clone() );
+        ensure!(!Self::name_exists( name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
+        NeuronNamespace::<T>::insert( name.clone(), key.clone() );
 
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
+
+        // 
         prev_neuron.name = name.clone();
         prev_neuron.ip = ip;
         prev_neuron.port = port;
         prev_neuron.context = context.clone();
         prev_neuron.block = current_block;
 
-        Neurons::<T>::insert( netuid, key.clone(), prev_neuron.clone() );
+        Neurons::<T>::insert( key.clone(), prev_neuron.clone() );
 
         // --- 7. We deposit neuron served event.
         log::info!("NeuronServed( key:{:?} ) ", key.clone() );
@@ -355,8 +345,8 @@ impl<T: Config> Pallet<T> {
 
 
 
-    pub fn name_exists( netuid: u16, name: Vec<u8> ) -> bool {
-        return NeuronNamespace::<T>::contains_key( netuid, name.clone());
+    pub fn name_exists( name: Vec<u8> ) -> bool {
+        return NeuronNamespace::<T>::contains_key(name.clone());
         
     }
 
@@ -403,7 +393,7 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn neuron_passes_rate_limit( netuid: u16, prev_neuron_info: &NeuronInfo, current_block: u64 ) -> bool {
+    pub fn neuron_passes_rate_limit( prev_neuron_info: &NeuronInfo, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
         let last_serve = prev_neuron_info.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
@@ -411,12 +401,12 @@ impl<T: Config> Pallet<T> {
 
 
 
-    pub fn has_neuron_info( netuid: u16, key: &T::AccountId ) -> bool {
+    pub fn has_neuron_info( key: &T::AccountId ) -> bool {
         return Neurons::<T>::contains_key( netuid, key );
     }
 
 
-    pub fn get_neuron_info( netuid: u16, key: &T::AccountId ) -> NeuronInfo {
+    pub fn get_neuron_info( key: &T::AccountId ) -> NeuronInfo {
         if Self::has_neuron_info( netuid, key ) {
             return Neurons::<T>::get( netuid, key ).unwrap();
         } else{

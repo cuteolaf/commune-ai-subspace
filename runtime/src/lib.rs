@@ -662,8 +662,8 @@ impl_runtime_apis! {
 	}
 
 	impl subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
-		fn get_subnet_info(netuid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_subnet_info(netuid);
+		fn get_net_info(netuid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_net_info(netuid);
 			if _result.is_some() {
 				let result = _result.expect("Could not get SubnetInfo");
 				result.encode()

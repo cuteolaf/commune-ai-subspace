@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
     // Helper function which returns the number of blocks remaining before we will run the epoch on this
     // network. Networks run their epoch when (block_number + netuid + 1 ) % (tempo + 1) = 0
     //
-    pub fn blocks_until_next_epoch( netuid: u16, tempo: u16, block_number: u64 ) -> u64 { 
+    pub fn blocks_until_next_epoch( tempo: u16, block_number: u64 ) -> u64 { 
         if tempo == 0 { return 10 } // Special case: tempo = 0, the network never runs.
         // tempo | netuid | # first epoch block
         //   1        0               0
@@ -37,7 +37,7 @@ impl<T: Config> Pallet<T> {
     // Helper function returns the number of tuples to drain on a particular step based on
     // the remaining tuples to sink and the block number
     //
-    pub fn tuples_to_drain_this_block( netuid: u16, tempo: u16, block_number: u64, n_remaining: usize ) -> usize {
+    pub fn tuples_to_drain_this_block( tempo: u16, block_number: u64, n_remaining: usize ) -> usize {
         let blocks_until_epoch: u64 = Self::blocks_until_next_epoch( netuid, tempo, block_number );  
         if blocks_until_epoch / 2 == 0 { return n_remaining } // drain all.
         if tempo / 2 == 0 { return n_remaining } // drain all

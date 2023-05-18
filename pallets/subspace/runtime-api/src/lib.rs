@@ -11,8 +11,8 @@ sp_api::decl_runtime_apis! {
 		fn get_neuron(netuid: u16, uid: u16) -> Vec<u8>;
 	}
 
-	pub trait SubnetInfoRuntimeApi {
-		fn get_subnet_info(netuid: u16) -> Vec<u8>;
-		fn get_subnets_info() -> Vec<u8>;
+	pub trait NetInfoRuntimeApi {
+		fn get_net_info(netuid: u16) -> Vec<u8>;
+		fn get_nets_info() -> Vec<u8>;
 	}
 }

@@ -72,12 +72,12 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::check_len_uids_within_allowed( netuid, &uids ), Error::<T>::TooManyUids);
 
         // --- 5. Check to see if the key is registered to the passed network.
-        ensure!( Self::is_key_registered_on_network( netuid, &key ), Error::<T>::NotRegistered );
+        ensure!( Self::is_key_registered( netuid, &key ), Error::<T>::NotRegistered );
 
 
         // --- 7. Get the neuron uid of associated key on network netuid.
         let neuron_uid;
-        match Self::get_uid_for_net_and_key( netuid, &key ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
+        match Self::get_uid_for_key( netuid, &key ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
         // --- 8. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
         let current_block: u64 = Self::get_current_block_as_u64();
@@ -121,8 +121,8 @@ impl<T: Config> Pallet<T> {
 
     // Checks if the neuron has set weights within the weights_set_rate_limit.
     //
-    pub fn check_rate_limit( netuid: u16, neuron_uid: u16, current_block: u64 ) -> bool {
-        if Self::is_uid_exist_on_network( netuid, neuron_uid ){ 
+    pub fn check_rate_limit( neuron_uid: u16, current_block: u64 ) -> bool {
+        if Self::is_uid_exist( netuid, neuron_uid ){ 
             // --- 1. Ensure that the diff between current and last_set weights is greater than limit.
             let last_set_weights: u64 = Self::get_last_update_for_uid( netuid, neuron_uid );
             if last_set_weights == 0 { return true; } // (Storage default) Never set weights.
@@ -133,9 +133,9 @@ impl<T: Config> Pallet<T> {
     }
 
     // Checks for any invalid uids on this network.
-    pub fn contains_invalid_uids( netuid: u16, uids: &Vec<u16> ) -> bool {
+    pub fn contains_invalid_uids( uids: &Vec<u16> ) -> bool {
         for uid in uids {
-            if !Self::is_uid_exist_on_network( netuid, *uid ) {
+            if !Self::is_uid_exist( netuid, *uid ) {
                 return true;
             }
         }
@@ -158,7 +158,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Returns True if the uids and weights are have a valid length for uid on network.
-    pub fn check_length( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
+    pub fn check_length( uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
         let min_allowed_length: usize = Self::get_min_allowed_weights(netuid) as usize;
 
         // Check self weight. Allowed to set single value for self weight.
@@ -182,7 +182,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Returns False if the weights exceed the max_weight_limit for this network.
-    pub fn max_weight_limited( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
+    pub fn max_weight_limited( uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
 
         // Allow self weights to exceed max weight limit.
         if Self::is_self_weight( uid, uids, weights ) { return true; }
@@ -207,8 +207,8 @@ impl<T: Config> Pallet<T> {
     }
 
     // Returns False is the number of uids exceeds the allowed number of uids for this network.
-    pub fn check_len_uids_within_allowed( netuid: u16, uids: &Vec<u16> ) -> bool {
-        let subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+    pub fn check_len_uids_within_allowed( uids: &Vec<u16> ) -> bool {
+        let subnetwork_n: u16 = Self::get_n();
         // we should expect at most subnetwork_n uids.
         return uids.len() <= subnetwork_n as usize;
     }

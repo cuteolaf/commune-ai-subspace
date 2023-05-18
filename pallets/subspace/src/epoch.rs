@@ -21,9 +21,9 @@ impl<T: Config> Pallet<T> {
     // 	* 'debug' ( bool ):
     // 		- Print debugging outputs.
     //    
-    pub fn epoch( netuid: u16, rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
+    pub fn epoch( rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
         // Get subnetwork size.
-        let n: u16 = Self::get_subnetwork_n( netuid );
+        let n: u16 = Self::get_n();
         log::trace!( "n: {:?}", n );
 
         // ======================
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_n() as usize; 
         let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n ]; 
         for neuron_uid in 0..n {
             stake_64[neuron_uid] = I64F64::from_num( Self::get_stake_for_uid_and_subnetwork( netuid, neuron_uid as u16 ) );
@@ -211,7 +211,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_block_at_registration( netuid:u16 ) -> Vec<u64> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let n: usize = Self::get_n() as usize;
         let mut block_at_registration: Vec<u64> = vec![ 0; n ];
         for neuron_uid in 0..n {
             if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
@@ -222,7 +222,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_weights_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16 ,u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
@@ -233,7 +233,7 @@ impl<T: Config> Pallet<T> {
     } 
 
     pub fn get_weights( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16,u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
@@ -244,7 +244,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_n() as usize; 
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
@@ -255,7 +255,7 @@ impl<T: Config> Pallet<T> {
     } 
 
     pub fn get_bonds( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_n() as usize; 
         let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 

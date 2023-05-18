@@ -10,13 +10,13 @@ impl<T: Config> Pallet<T> {
     // ========================
 	// ==== Global Setters ====
 	// ========================
-    pub fn set_tempo( netuid: u16, tempo: u16 ) { Tempo::<T>::insert( netuid, tempo ); }
-    pub fn set_last_adjustment_block( netuid: u16, last_adjustment_block: u64 ) { LastAdjustmentBlock::<T>::insert( netuid, last_adjustment_block ); }
-    pub fn set_blocks_since_last_step( netuid: u16, blocks_since_last_step: u64 ) { BlocksSinceLastStep::<T>::insert( netuid, blocks_since_last_step ); }
-    pub fn set_registrations_this_block( netuid: u16, registrations_this_block: u16 ) { RegistrationsThisBlock::<T>::insert(netuid, registrations_this_block); }
-    pub fn set_last_mechanism_step_block( netuid: u16, last_mechanism_step_block: u64 ) { LastMechansimStepBlock::<T>::insert(netuid, last_mechanism_step_block); }
-    pub fn set_registrations_this_interval( netuid: u16, registrations_this_interval: u16 ) { RegistrationsThisInterval::<T>::insert(netuid, registrations_this_interval); }
-    pub fn set_pow_registrations_this_interval( netuid: u16, pow_registrations_this_interval: u16 ) { POWRegistrationsThisInterval::<T>::insert(netuid, pow_registrations_this_interval); }
+    pub fn set_tempo( tempo: u16 ) { Tempo::<T>::insert(  tempo ); }
+    pub fn set_last_adjustment_block( last_adjustment_block: u64 ) { LastAdjustmentBlock::<T>::insert(last_adjustment_block ); }
+    pub fn set_blocks_since_last_step( blocks_since_last_step: u64 ) { BlocksSinceLastStep::<T>::insert(blocks_since_last_step ); }
+    pub fn set_registrations_this_block( registrations_this_block: u16 ) { RegistrationsThisBlock::<T>::insert(registrations_this_block); }
+    pub fn set_last_mechanism_step_block( last_mechanism_step_block: u64 ) { LastMechansimStepBlock::<T>::insert(last_mechanism_step_block); }
+    pub fn set_registrations_this_interval( registrations_this_interval: u16 ) { RegistrationsThisInterval::<T>::insert(registrations_this_interval); }
+    pub fn set_pow_registrations_this_interval( pow_registrations_this_interval: u16 ) { POWRegistrationsThisInterval::<T>::insert(pow_registrations_this_interval); }
 
     // ========================
 	// ==== Global Getters ====
@@ -28,54 +28,53 @@ impl<T: Config> Pallet<T> {
     // ==============================
 	// ==== Yuma params ====
 	// ==============================
-    pub fn get_rank( netuid:u16 ) -> Vec<u16> { Rank::<T>::get( netuid ) }
-    pub fn get_active( netuid:u16 ) -> Vec<bool> { Active::<T>::get( netuid ) }
-    pub fn get_emission( netuid:u16 ) -> Vec<u64> { Emission::<T>::get( netuid ) }
-    pub fn get_incentive( netuid:u16 ) -> Vec<u16> { Incentive::<T>::get( netuid ) }
-    pub fn get_dividends( netuid:u16 ) -> Vec<u16> { Dividends::<T>::get( netuid ) }
-    pub fn get_last_update( netuid:u16 ) -> Vec<u64> { LastUpdate::<T>::get( netuid ) }
-    pub fn get_pruning_score( netuid:u16 ) -> Vec<u16> { PruningScores::<T>::get( netuid ) }
+    pub fn get_rank( ) -> Vec<u16> { Rank::<T>::get() }
+    pub fn get_active( ) -> Vec<bool> { Active::<T>::get() }
+    pub fn get_emission( ) -> Vec<u64> { Emission::<T>::get() }
+    pub fn get_incentive( ) -> Vec<u16> { Incentive::<T>::get() }
+    pub fn get_dividends( ) -> Vec<u16> { Dividends::<T>::get() }
+    pub fn get_last_update( ) -> Vec<u64> { LastUpdate::<T>::get() }
+    pub fn get_pruning_score( ) -> Vec<u16> { PruningScores::<T>::get() }
 
     
-    pub fn set_last_update_for_uid( netuid:u16, uid: u16, last_update: u64 ) { 
-        let mut updated_last_update_vec = Self::get_last_update( netuid ); 
+    pub fn set_last_update_for_uid( uid: u16, last_update: u64 ) { 
+        let mut updated_last_update_vec = Self::get_last_update(); 
         if (uid as usize) < updated_last_update_vec.len() { 
             updated_last_update_vec[uid as usize] = last_update;
-            LastUpdate::<T>::insert( netuid, updated_last_update_vec );
+            LastUpdate::<T>::insert(updated_last_update_vec );
         }  
     }
-    pub fn set_active_for_uid( netuid:u16, uid: u16, active: bool ) { 
-        let mut updated_active_vec = Self::get_active( netuid ); 
+    pub fn set_active_for_uid(uid: u16, active: bool ) { 
+        let mut updated_active_vec = Self::get_active(); 
         if (uid as usize) < updated_active_vec.len() { 
             updated_active_vec[uid as usize] = active;
-            Active::<T>::insert( netuid, updated_active_vec );
+            Active::<T>::insert(updated_active_vec );
         }  
     }
-    pub fn set_pruning_score_for_uid( netuid:u16, uid: u16, pruning_score: u16 ) {
-        log::info!("netuid = {:?}", netuid);
-        log::info!("SubnetworkN::<T>::get( netuid ) = {:?}", SubnetworkN::<T>::get( netuid ) );
+    pub fn set_pruning_score_for_uid(uid: u16, pruning_score: u16 ) {
+        log::info!("SubnetworkN::<T>::get() = {:?}", SubnetworkN::<T>::get() );
         log::info!("uid = {:?}", uid );
-        assert!( uid < SubnetworkN::<T>::get( netuid ) );
-        PruningScores::<T>::mutate( netuid, |v| v[uid as usize] = pruning_score );
+        assert!( uid < SubnetworkN::<T>::get() );
+        PruningScores::<T>::mutate(|v| v[uid as usize] = pruning_score );
     }
 
-    pub fn get_rank_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Rank::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_emission_for_uid( netuid:u16, uid: u16) -> u64 {let vec =  Emission::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_active_for_uid( netuid:u16, uid: u16) -> bool { let vec = Active::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
-    pub fn get_incentive_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Incentive::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_dividends_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Dividends::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_last_update_for_uid( netuid:u16, uid: u16) -> u64 { let vec = LastUpdate::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_pruning_score_for_uid( netuid:u16, uid: u16) -> u16 { let vec = PruningScores::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return u16::MAX } }
+    pub fn get_rank_for_uid(uid: u16) -> u16 { let vec = Rank::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
+    pub fn get_emission_for_uid(uid: u16) -> u64 {let vec =  Emission::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
+    pub fn get_active_for_uid(uid: u16) -> bool { let vec = Active::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
+    pub fn get_incentive_for_uid(uid: u16) -> u16 { let vec = Incentive::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
+    pub fn get_dividends_for_uid(uid: u16) -> u16 { let vec = Dividends::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
+    pub fn get_last_update_for_uid(uid: u16) -> u64 { let vec = LastUpdate::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
+    pub fn get_pruning_score_for_uid(uid: u16) -> u16 { let vec = PruningScores::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return u16::MAX } }
 
-    pub fn get_context_for_uid( netuid:u16, uid: u16) -> Vec<u8> { 
-        let key = Self::get_key_for_net_and_uid(netuid, uid);
-        let neuron= Neurons::<T>::get( netuid, key ).unwrap();
+    pub fn get_context_for_uid(uid: u16) -> Vec<u8> { 
+        let key = Self::get_key_for_uid(uid);
+        let neuron= Neurons::<T>::get(key ).unwrap();
         return neuron.context.clone();
      }
 
-    pub fn get_name_for_uid( netuid:u16, uid: u16) -> Vec<u8> { 
-        let key = Self::get_key_for_net_and_uid(netuid, uid);
-        let neuron= Neurons::<T>::get( netuid, key ).unwrap();
+    pub fn get_name_for_uid(uid: u16) -> Vec<u8> { 
+        let key = Self::get_key_for_uid(uid);
+        let neuron= Neurons::<T>::get(key ).unwrap();
         return neuron.name.clone();
     
     }
@@ -83,16 +82,16 @@ impl<T: Config> Pallet<T> {
     // ============================
 	// ==== Subnetwork Getters ====
 	// ============================
-    pub fn get_tempo( netuid:u16 ) -> u16{ Tempo::<T>::get( netuid ) }
-    pub fn get_emission_value( netuid: u16 ) -> u64 { EmissionValues::<T>::get( netuid ) }
-    pub fn get_pending_emission( netuid:u16 ) -> u64{ PendingEmission::<T>::get( netuid ) }
-    pub fn get_last_adjustment_block( netuid: u16) -> u64 { LastAdjustmentBlock::<T>::get( netuid ) }
-    pub fn get_blocks_since_last_step(netuid:u16 ) -> u64 { BlocksSinceLastStep::<T>::get( netuid ) }
-    pub fn get_registrations_this_block( netuid:u16 ) -> u16 { RegistrationsThisBlock::<T>::get( netuid ) }
-    pub fn get_last_mechanism_step_block( netuid: u16 ) -> u64 { LastMechansimStepBlock::<T>::get( netuid ) }
-    pub fn get_registrations_this_interval( netuid: u16 ) -> u16 { RegistrationsThisInterval::<T>::get( netuid ) } 
-    pub fn get_pow_registrations_this_interval( netuid: u16 ) -> u16 { POWRegistrationsThisInterval::<T>::get( netuid ) } 
-    pub fn get_neuron_block_at_registration( netuid: u16, neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get( netuid, neuron_uid )}
+    pub fn get_tempo( ) -> u16{ Tempo::<T>::get() }
+    pub fn get_emission_value( ) -> u64 { EmissionValues::<T>::get() }
+    pub fn get_pending_emission( ) -> u64{ PendingEmission::<T>::get() }
+    pub fn get_last_adjustment_block( ) -> u64 { LastAdjustmentBlock::<T>::get() }
+    pub fn get_blocks_since_last_step() -> u64 { BlocksSinceLastStep::<T>::get() }
+    pub fn get_registrations_this_block( ) -> u16 { RegistrationsThisBlock::<T>::get() }
+    pub fn get_last_mechanism_step_block( ) -> u64 { LastMechansimStepBlock::<T>::get() }
+    pub fn get_registrations_this_interval( ) -> u16 { RegistrationsThisInterval::<T>::get() } 
+    pub fn get_pow_registrations_this_interval( ) -> u16 { POWRegistrationsThisInterval::<T>::get() } 
+    pub fn get_neuron_block_at_registration( neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get(neuron_uid )}
 
     // ========================
 	// ==== Rate Limiting =====
@@ -119,119 +118,108 @@ impl<T: Config> Pallet<T> {
         Ok(()) 
     }
 
-    pub fn get_serving_rate_limit( netuid: u16 ) -> u64 { ServingRateLimit::<T>::get(netuid) }
-    pub fn set_serving_rate_limit( netuid: u16, serving_rate_limit: u64 ) { ServingRateLimit::<T>::insert( netuid, serving_rate_limit ) }
-    pub fn do_sudo_set_serving_rate_limit( origin: T::RuntimeOrigin, netuid: u16, serving_rate_limit: u64 ) -> DispatchResult { 
+    pub fn get_serving_rate_limit( ) -> u64 { ServingRateLimit::<T>::get() }
+    pub fn set_serving_rate_limit( serving_rate_limit: u64 ) { ServingRateLimit::<T>::insert(serving_rate_limit ) }
+    pub fn do_sudo_set_serving_rate_limit( origin: T::RuntimeOrigin, serving_rate_limit: u64 ) -> DispatchResult { 
         let key = ensure_signed( origin )?;
-        Self::set_serving_rate_limit( netuid, serving_rate_limit );
+        Self::set_serving_rate_limit(serving_rate_limit );
         log::info!("ServingRateLimitSet( serving_rate_limit: {:?} ) ", serving_rate_limit );
-        Self::deposit_event( Event::ServingRateLimitSet( netuid, serving_rate_limit ) );
+        Self::deposit_event( Event::ServingRateLimitSet(serving_rate_limit ) );
         Ok(()) 
     }
 
 
-    pub fn get_weights_set_rate_limit( netuid: u16) -> u64 { WeightsSetRateLimit::<T>::get( netuid ) }
-    pub fn set_weights_set_rate_limit( netuid: u16, weights_set_rate_limit: u64 ) { WeightsSetRateLimit::<T>::insert( netuid, weights_set_rate_limit ); }
-    pub fn do_sudo_set_weights_set_rate_limit( origin: T::RuntimeOrigin, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult { 
+    pub fn get_weights_set_rate_limit( ) -> u64 { WeightsSetRateLimit::<T>::get() }
+    pub fn set_weights_set_rate_limit( weights_set_rate_limit: u64 ) { WeightsSetRateLimit::<T>::insert(weights_set_rate_limit ); }
+    pub fn do_sudo_set_weights_set_rate_limit( origin: T::RuntimeOrigin, weights_set_rate_limit: u64 ) -> DispatchResult { 
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_weights_set_rate_limit( netuid, weights_set_rate_limit );
-        log::info!("WeightsSetRateLimitSet( netuid: {:?} weights_set_rate_limit: {:?} ) ", netuid, weights_set_rate_limit);
-        Self::deposit_event( Event::WeightsSetRateLimitSet( netuid, weights_set_rate_limit) );
+        Self::set_weights_set_rate_limit(weights_set_rate_limit );
+        log::info!("WeightsSetRateLimitSet( weights_set_rate_limit: {:?} ) ",weights_set_rate_limit);
+        Self::deposit_event( Event::WeightsSetRateLimitSet(weights_set_rate_limit) );
         Ok(()) 
     }
 
-    pub fn get_adjustment_interval( netuid: u16) -> u16 { AdjustmentInterval::<T>::get( netuid ) }
-    pub fn set_adjustment_interval( netuid: u16, adjustment_interval: u16 ) { AdjustmentInterval::<T>::insert( netuid, adjustment_interval ); }
-    pub fn do_set_adjustment_interval( origin: T::RuntimeOrigin, netuid: u16, adjustment_interval: u16 ) -> DispatchResult { 
+    pub fn get_adjustment_interval( ) -> u16 { AdjustmentInterval::<T>::get() }
+    pub fn set_adjustment_interval( adjustment_interval: u16 ) { AdjustmentInterval::<T>::insert(adjustment_interval ); }
+    pub fn do_set_adjustment_interval( origin: T::RuntimeOrigin, adjustment_interval: u16 ) -> DispatchResult { 
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_adjustment_interval( netuid, adjustment_interval );
-        log::info!("AdjustmentIntervalSet( netuid: {:?} adjustment_interval: {:?} ) ", netuid, adjustment_interval);
-        Self::deposit_event( Event::AdjustmentIntervalSet( netuid, adjustment_interval) );
+        Self::set_adjustment_interval(adjustment_interval );
+        log::info!("AdjustmentIntervalSet( adjustment_interval: {:?} ) ",adjustment_interval);
+        Self::deposit_event( Event::AdjustmentIntervalSet(adjustment_interval) );
         Ok(()) 
     }
 
-    pub fn get_max_weight_limit( netuid: u16) -> u16 { MaxWeightsLimit::<T>::get( netuid ) }    
-    pub fn set_max_weight_limit( netuid: u16, max_weight_limit: u16 ) { MaxWeightsLimit::<T>::insert( netuid, max_weight_limit ); }
-    pub fn do_sudo_set_max_weight_limit( origin:T::RuntimeOrigin, netuid: u16, max_weight_limit: u16 ) -> DispatchResult {
+    pub fn get_max_weight_limit( ) -> u16 { MaxWeightsLimit::<T>::get() }    
+    pub fn set_max_weight_limit( max_weight_limit: u16 ) { MaxWeightsLimit::<T>::insert(max_weight_limit ); }
+    pub fn do_sudo_set_max_weight_limit( origin:T::RuntimeOrigin, max_weight_limit: u16 ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
-        Self::set_max_weight_limit( netuid, max_weight_limit );
-        log::info!("MaxWeightLimitSet( netuid: {:?} max_weight_limit: {:?} ) ", netuid, max_weight_limit);
-        Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
+        Self::set_max_weight_limit(max_weight_limit );
+        log::info!("MaxWeightLimitSet(  max_weight_limit: {:?} ) ",max_weight_limit);
+        Self::deposit_event( Event::MaxWeightLimitSet(max_weight_limit ) );
         Ok(())
     }
 
-    pub fn get_immunity_period(netuid: u16 ) -> u16 { ImmunityPeriod::<T>::get( netuid ) }
-    pub fn set_immunity_period( netuid: u16, immunity_period: u16 ) { ImmunityPeriod::<T>::insert( netuid, immunity_period ); }
-    pub fn do_sudo_set_immunity_period( origin:T::RuntimeOrigin, netuid: u16, immunity_period: u16 ) -> DispatchResult {
+    pub fn get_immunity_period() -> u16 { ImmunityPeriod::<T>::get() }
+    pub fn set_immunity_period( immunity_period: u16 ) { ImmunityPeriod::<T>::insert(immunity_period ); }
+    pub fn do_sudo_set_immunity_period( origin:T::RuntimeOrigin, immunity_period: u16 ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_immunity_period( netuid, immunity_period );
-        log::info!("ImmunityPeriodSet( netuid: {:?} immunity_period: {:?} ) ", netuid, immunity_period);
-        Self::deposit_event(Event::ImmunityPeriodSet(netuid, immunity_period));
+        Self::set_immunity_period(immunity_period );
+        log::info!("ImmunityPeriodSet(  immunity_period: {:?} ) ",immunity_period);
+        Self::deposit_event(Event::ImmunityPeriodSet(immunity_period));
         Ok(())
     }
 
-    pub fn get_min_allowed_weights( netuid:u16 ) -> u16 { MinAllowedWeights::<T>::get( netuid ) }
-    pub fn set_min_allowed_weights( netuid: u16, min_allowed_weights: u16 ) { MinAllowedWeights::<T>::insert( netuid, min_allowed_weights ); }
-    pub fn do_sudo_set_min_allowed_weights( origin:T::RuntimeOrigin, netuid: u16, min_allowed_weights: u16 ) -> DispatchResult {
+    pub fn get_min_allowed_weights( ) -> u16 { MinAllowedWeights::<T>::get() }
+    pub fn set_min_allowed_weights( min_allowed_weights: u16 ) { MinAllowedWeights::<T>::insert(min_allowed_weights ); }
+    pub fn do_sudo_set_min_allowed_weights( origin:T::RuntimeOrigin, min_allowed_weights: u16 ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_min_allowed_weights( netuid, min_allowed_weights );
-        log::info!("MinAllowedWeightSet( netuid: {:?} min_allowed_weights: {:?} ) ", netuid, min_allowed_weights);
-        Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
+        Self::set_min_allowed_weights(min_allowed_weights );
+        log::info!("MinAllowedWeightSet(  min_allowed_weights: {:?} ) ",min_allowed_weights);
+        Self::deposit_event( Event::MinAllowedWeightSet(min_allowed_weights) );
         Ok(())
     }
 
-    pub fn get_max_allowed_uids( netuid: u16 ) -> u16  { MaxAllowedUids::<T>::get( netuid ) }
-    pub fn set_max_allowed_uids(netuid: u16, max_allowed: u16) { MaxAllowedUids::<T>::insert( netuid, max_allowed ); }
-    pub fn do_sudo_set_max_allowed_uids( origin:T::RuntimeOrigin, netuid: u16, max_allowed_uids: u16 ) -> DispatchResult {
+    pub fn get_max_allowed_uids( ) -> u16  { MaxAllowedUids::<T>::get() }
+    pub fn set_max_allowed_uids( max_allowed: u16) { MaxAllowedUids::<T>::insert(max_allowed ); }
+    pub fn do_sudo_set_max_allowed_uids( origin:T::RuntimeOrigin,max_allowed_uids: u16 ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
-        ensure!(Self::get_max_allowed_uids(netuid)< max_allowed_uids, Error::<T>::MaxAllowedUIdsNotAllowed);
-        Self::set_max_allowed_uids( netuid, max_allowed_uids );
-        log::info!("MaxAllowedUidsSet( netuid: {:?} max_allowed_uids: {:?} ) ", netuid, max_allowed_uids);
-        Self::deposit_event( Event::MaxAllowedUidsSet( netuid, max_allowed_uids) );
+        ensure!(Self::get_max_allowed_uids()< max_allowed_uids, Error::<T>::MaxAllowedUIdsNotAllowed);
+        Self::set_max_allowed_uids( max_allowed_uids );
+        log::info!("MaxAllowedUidsSet( max_allowed_uids: {:?} ) ", max_allowed_uids);
+        Self::deposit_event( Event::MaxAllowedUidsSet(max_allowed_uids) );
         Ok(())
     }
 
         
-            
-    pub fn get_activity_cutoff( netuid: u16 ) -> u16  { ActivityCutoff::<T>::get( netuid ) }
-    pub fn do_sudo_set_activity_cutoff( origin:T::RuntimeOrigin, netuid: u16, activity_cutoff: u16 ) -> DispatchResult {
+    pub fn get_activity_cutoff(  ) -> u16  { ActivityCutoff::<T>::get( ) }
+    pub fn do_sudo_set_activity_cutoff( origin:T::RuntimeOrigin, activity_cutoff: u16 ) -> DispatchResult {
         let key = ensure_signed( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        ActivityCutoff::<T>::insert( netuid, activity_cutoff ); 
-        log::info!("ActivityCutoffSet( netuid: {:?} activity_cutoff: {:?} ) ", netuid, activity_cutoff);
-        Self::deposit_event( Event::ActivityCutoffSet( netuid, activity_cutoff) );
+        ActivityCutoff::<T>::insert( activity_cutoff ); 
+        log::info!("ActivityCutoffSet( activity_cutoff: {:?} ) ", activity_cutoff);
+        Self::deposit_event( Event::ActivityCutoffSet( activity_cutoff) );
         Ok(())
     }
             
-    pub fn get_target_registrations_per_interval( netuid: u16 ) -> u16 { TargetRegistrationsPerInterval::<T>::get( netuid ) }
-    pub fn set_target_registrations_per_interval( netuid: u16, target_registrations_per_interval: u16 ) { TargetRegistrationsPerInterval::<T>::insert( netuid, target_registrations_per_interval ); }
-    pub fn do_sudo_set_target_registrations_per_interval( origin:T::RuntimeOrigin, netuid: u16, target_registrations_per_interval: u16 ) -> DispatchResult {
+    pub fn get_target_registrations_per_interval(  ) -> u16 { TargetRegistrationsPerInterval::<T>::get( ) }
+    pub fn set_target_registrations_per_interval( target_registrations_per_interval: u16 ) { TargetRegistrationsPerInterval::<T>::insert( target_registrations_per_interval ); }
+    pub fn do_sudo_set_target_registrations_per_interval( origin:T::RuntimeOrigin,  target_registrations_per_interval: u16 ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_target_registrations_per_interval( netuid, target_registrations_per_interval );
-        log::info!("RegistrationPerIntervalSet( netuid: {:?} target_registrations_per_interval: {:?} ) ", netuid, target_registrations_per_interval );
-        Self::deposit_event( Event::RegistrationPerIntervalSet( netuid, target_registrations_per_interval) );
+        Self::set_target_registrations_per_interval(target_registrations_per_interval );
+        log::info!("RegistrationPerIntervalSet(  target_registrations_per_interval: {:?} ) ", target_registrations_per_interval );
+        Self::deposit_event( Event::RegistrationPerIntervalSet(target_registrations_per_interval) );
         Ok(())
     }
 
-    pub fn get_max_registrations_per_block( netuid: u16 ) -> u16 { MaxRegistrationsPerBlock::<T>::get( netuid ) }
-    pub fn set_max_registrations_per_block( netuid: u16, max_registrations_per_block: u16 ) { MaxRegistrationsPerBlock::<T>::insert( netuid, max_registrations_per_block ); }
+    pub fn get_max_registrations_per_block() -> u16 { MaxRegistrationsPerBlock::<T>::get( ) }
+    pub fn set_max_registrations_per_block( max_registrations_per_block: u16 ) { MaxRegistrationsPerBlock::<T>::insert( max_registrations_per_block ); }
     pub fn do_sudo_set_max_registrations_per_block(
         origin: T::RuntimeOrigin, 
-        netuid: u16, 
         max_registrations_per_block: u16
     ) -> DispatchResult {
         ensure_root( origin )?;
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_max_registrations_per_block( netuid, max_registrations_per_block );
-        log::info!("MaxRegistrationsPerBlock( netuid: {:?} max_registrations_per_block: {:?} ) ", netuid, max_registrations_per_block );
-        Self::deposit_event( Event::MaxRegistrationsPerBlockSet( netuid, max_registrations_per_block) );
+        Self::set_max_registrations_per_block( max_registrations_per_block );
+        log::info!("MaxRegistrationsPerBlock(  max_registrations_per_block: {:?} ) ",max_registrations_per_block );
+        Self::deposit_event( Event::MaxRegistrationsPerBlockSet( max_registrations_per_block) );
         Ok(())
     }
 

@@ -495,19 +495,19 @@ pub mod pallet {
 					let (stake, uid) = stake_uid;
 
 					// Expand Yuma with new position.
-					Rank::<T>::mutate(netuid, |v| v.push(0));
-					Active::<T>::mutate(netuid, |v| v.push(true));
-					Emission::<T>::mutate(netuid, |v| v.push(0));
-					Incentive::<T>::mutate(netuid, |v| v.push(0));
-					Dividends::<T>::mutate(netuid, |v| v.push(0));
-					LastUpdate::<T>::mutate(netuid, |v| v.push(0));
-					PruningScores::<T>::mutate(netuid, |v| v.push(0));
+					Rank::<T>::mutate(|v| v.push(0));
+					Active::<T>::mutate(|v| v.push(true));
+					Emission::<T>::mutate(|v| v.push(0));
+					Incentive::<T>::mutate(|v| v.push(0));
+					Dividends::<T>::mutate(|v| v.push(0));
+					LastUpdate::<T>::mutate(|v| v.push(0));
+					PruningScores::<T>::mutate(|v| v.push(0));
 			
 					// Insert account information.
-					Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.
-					Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
-					BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
-					IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
+					Keys::<T>::insert(uid, key.clone()); // Make key - uid association.
+					Uids::<T>::insert(key.clone(), uid); // Make uid - key association.
+					BlockAtRegistration::<T>::insert(uid, 0); // Fill block at registration.
+					IsNetworkMember::<T>::insert(key.clone(), true); // Fill network is member.
 	
 					// Fill stake information.
 	
@@ -523,11 +523,6 @@ pub mod pallet {
 				}
 			}
 
-	 	 	// Set correct length for Subnet neurons
-			SubnetworkN::<T>::insert(netuid, next_uid);
-
-			// --- Increase total network count.
-			TotalNetworks::<T>::mutate(|n| *n += 1);
 		}
 	}
 
@@ -617,7 +612,6 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(2)), DispatchClass::Normal, Pays::No))]
 		pub fn set_weights(
 			origin:OriginFor<T>, 
-			netuid: u16,
 			dests: Vec<u16>, 
 			weights: Vec<u16>,
 		) -> DispatchResult {
@@ -719,29 +713,15 @@ pub mod pallet {
 		// 	* 'origin': (<T as frame_system::Config>Origin):
 		// 		- The signature of the caller.
 		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
-		// 	* 'version' (u64):
-		// 		- The commune version identifier.
-		//
+
 		// 	* 'ip' (u64):
 		// 		- The endpoint ip information as a u128 encoded integer.
 		//
 		// 	* 'port' (u16):
 		// 		- The endpoint port information as a u16 encoded integer.
-		// 
-		// 	* 'ip_type' (u8):
-		// 		- The endpoint ip version as a u8, 4 or 6.
-		//
+
 		// 	* 'protocol' (u8):
 		// 		- UDP:1 or TCP:0 
-		//
-		// 	* 'placeholder1' (u8):
-		// 		- Placeholder for further extra params.
-		//
-		// 	* 'placeholder2' (u8):
-		// 		- Placeholder for further extra params.
 		//
 		// # Event:
 		// 	* NeuronServed;
@@ -768,13 +748,12 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
 		pub fn serve_neuron(
 			origin:OriginFor<T>, 
-			netuid: u16,
 			ip: u128, 
 			port: u16,
 			name : Vec<u8>,
 			context: Vec<u8>
 		) -> DispatchResult {
-			Self::do_serve_neuron( origin, netuid, ip, port, name, context ) 
+			Self::do_serve_neuron( origin, ip, port, name, context ) 
 		}
 
 
@@ -783,13 +762,12 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
 		pub fn update_neuron(
 			origin:OriginFor<T>, 
-			netuid: u16,
 			ip: u128, 
 			port: u16,
 			name : Vec<u8>,
 			context: Vec<u8>
 		) -> DispatchResult {
-			Self::do_update_neuron( origin, netuid, ip, port, name, context ) 
+			Self::do_update_neuron( origin, ip, port, name, context ) 
 		}
 
 
@@ -836,85 +814,15 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(22)), DispatchClass::Normal, Pays::No))]
 		pub fn register( 
 				origin:OriginFor<T>, 
-				netuid: u16,
 				ip: u128, 
 				port: u16, 
 				name: Vec<u8>,
 				context: Vec<u8>
 		) -> DispatchResult { 
-			Self::do_registration(origin, netuid, ip, port, name, context)
+			Self::do_registration(origin, ip, port, name, context)
 		}
 
 
-		// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
-
-		// ---- Sudo add a network to the network set.
-		// # Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- Must be sudo.
-		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
-		// 	* 'tempo' ( u16 ):
-		// 		- Number of blocks between epoch step.
-		//
-		// 	* 'modality' ( u16 ):
-		// 		- Network modality specifier.
-		//
-		// # Event:
-		// 	* NetworkAdded;
-		// 		- On successfully creation of a network.
-		//
-		// # Raises:
-		// 	* 'NetworkExist':
-		// 		- Attempting to register an already existing.
-		//
-		// 	* 'InvalidModality':
-		// 		- Attempting to register a network with an invalid modality.
-		//
-		// 	* 'InvalidTempo':
-		// 		- Attempting to register a network with an invalid tempo.
-		//
-		#[pallet::weight((Weight::from_ref_time(50_000_000)
-		.saturating_add(T::DbWeight::get().reads(17))
-		.saturating_add(T::DbWeight::get().writes(20)), DispatchClass::Operational, Pays::No))]
-		pub fn add_network(
-			origin: OriginFor<T>,
-			netuid: u16,
-			name: Vec<u8>,
-			context: Vec<u8>,
-			tempo: u16,
-			n: u16
-		) -> DispatchResultWithPostInfo {
-			Self::do_add_network(origin, name, context, tempo, n)
-		}
-
-		// ---- Sudo remove a network from the network set.
-		// # Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- Must be sudo.
-		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
-		// # Event:
-		// 	* NetworkRemoved;
-		// 		- On the successfull removing of this network.
-		//
-		// # Raises:
-		// 	* 'NetworkDoesNotExist':
-		// 		- Attempting to remove a non existent network.
-		//
-		#[pallet::weight((Weight::from_ref_time(42_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(31)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network(
-			origin: OriginFor<T>,
-			netuid: u16
-		) -> DispatchResult {
-			Self::do_remove_network(origin, netuid)
-		} 
 
 		// ---- Sudo set emission values for all networks.
 		// Args:
@@ -932,12 +840,10 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(10)), DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_emission_values(
 			origin: OriginFor<T>,
-			netuids: Vec<u16>,
 			emission: Vec<u64>,
 		) -> DispatchResult {
 			Self::do_set_emission_values( 
 				origin,
-				netuids,
 				emission
 			)
 		}
@@ -1049,7 +955,7 @@ pub mod pallet {
 		// --- Returns the transaction priority for setting weights.
 		pub fn get_priority_set_weights( key: &T::AccountId, netuid: u16 ) -> u64 {
 			if Uids::<T>::contains_key( netuid, &key ) {
-				let uid = Self::get_uid_for_net_and_key(netuid, &key.clone()).unwrap();
+				let uid = Self::get_uid_for_key(netuid, &key.clone()).unwrap();
 				let current_block_number: u64 = Self::get_current_block_as_u64();
 				return current_block_number - Self::get_last_update_for_uid(netuid, uid as u16);
 			}

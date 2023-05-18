@@ -9,12 +9,10 @@ use codec::Compact;
 pub struct NeuronSubnetInfo<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
-    netuid: Compact<u16>,
     active: bool,
     context: Vec<u8>,
     name: Vec<u8>,
     last_update: Compact<u64>,
-    
     // Subnet Info
     stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this neuron/key (includes delegations)
     rank: Compact<u16>,
@@ -25,7 +23,6 @@ pub struct NeuronSubnetInfo<T: Config> {
     bonds: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, bond)
     pruning_score: Compact<u16>,
 }
-
 
 impl<T: Config> Pallet<T> {
 	pub fn get_neurons(netuid: u16) -> Vec<NeuronSubnetInfo<T>> {
@@ -39,7 +36,7 @@ impl<T: Config> Pallet<T> {
             let uid = uid;
             let netuid = netuid;
 
-            let _neuron = Self::get_neuron_subnet_exists(netuid, uid);
+            let _neuron = Self::get_neuron(uid);
             let neuron;
             if _neuron.is_none() {
                 break; // No more neurons
@@ -53,27 +50,25 @@ impl<T: Config> Pallet<T> {
         return neurons;
 	}
 
-    fn get_neuron_subnet_exists(netuid: u16, uid: u16) -> Option<NeuronSubnetInfo<T>> {
-        let key = Self::get_key_for_net_and_uid(netuid, uid);
-        let neuron_info = Self::get_neuron_info( netuid, &key.clone() );
+    fn get_neuron( uid: u16) -> Option<NeuronSubnetInfo<T>> {
+        
+        let key = Self::get_key_for_uid(uid);
+        let neuron_info = Self::get_neuron_info( &key.clone() );    
+        let active = Self::get_active_for_uid( uid as u16 );
+        let rank = Self::get_rank_for_uid(  uid as u16 );
+        let emission = Self::get_emission_for_uid(  uid as u16 );
+        let incentive = Self::get_incentive_for_uid(  uid as u16 );
+        let dividends = Self::get_dividends_for_uid(  uid as u16 );
+        let pruning_score = Self::get_pruning_score_for_uid(  uid as u16 );
+        let last_update = Self::get_last_update_for_uid(  uid as u16 );
+        let context = Self::get_context_for_uid(  uid as u16 );
+        let name = Self::get_name_for_uid(  uid as u16 );
 
-
-                
-        let active = Self::get_active_for_uid( netuid, uid as u16 );
-        let rank = Self::get_rank_for_uid( netuid, uid as u16 );
-        let emission = Self::get_emission_for_uid( netuid, uid as u16 );
-        let incentive = Self::get_incentive_for_uid( netuid, uid as u16 );
-        let dividends = Self::get_dividends_for_uid( netuid, uid as u16 );
-        let pruning_score = Self::get_pruning_score_for_uid( netuid, uid as u16 );
-        let last_update = Self::get_last_update_for_uid( netuid, uid as u16 );
-        let context = Self::get_context_for_uid( netuid, uid as u16 );
-        let name = Self::get_name_for_uid( netuid, uid as u16 );
-
-        let weights = <Weights<T>>::get(netuid, uid).iter()
+        let weights = <Weights<T>>::get( uid).iter()
             .filter_map(|(i, w)| if *w > 0 { Some((i.into(), w.into())) } else { None })
             .collect::<Vec<(Compact<u16>, Compact<u16>)>>();
         
-        let bonds = <Bonds<T>>::get(netuid, uid).iter()
+        let bonds = <Bonds<T>>::get( uid).iter()
             .filter_map(|(i, b)| if *b > 0 { Some((i.into(), b.into())) } else { None })
             .collect::<Vec<(Compact<u16>, Compact<u16>)>>();
         
@@ -81,12 +76,9 @@ impl<T: Config> Pallet<T> {
             .map(|(key, stake)| (key, stake.into()))
             .collect();
 
-        
-
-        let neuron = NeuronSubnetInfo {
+        let neuron = NeuronNetInfo {
             key: key.clone(),
             uid: uid.into(),
-            netuid: netuid.into(),
             active: active,
             stake: stake,
             rank: rank.into(),
@@ -103,17 +95,5 @@ impl<T: Config> Pallet<T> {
         
         return Some(neuron);
     }
-
-    pub fn get_neuron(netuid: u16, uid: u16) -> Option<NeuronSubnetInfo<T>> {
-        if !Self::if_subnet_exist(netuid) {
-            return None;
-        }
-
-        let neuron = Self::get_neuron_subnet_exists(netuid, uid);
-        return neuron;
-	}
-
-
-
 }
 

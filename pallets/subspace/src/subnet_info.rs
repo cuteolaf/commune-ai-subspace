@@ -7,12 +7,10 @@ use alloc::vec::Vec;
 use codec::Compact;
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct SubnetInfo {
-    netuid: Compact<u16>,
+pub struct NetInfo {
     immunity_period: Compact<u16>,
     min_allowed_weights: Compact<u16>,
     max_weights_limit: Compact<u16>,
-    subnetwork_n: Compact<u16>,
     max_allowed_uids: Compact<u16>,
     blocks_since_last_step: Compact<u64>,
     tempo: Compact<u16>,
@@ -20,28 +18,26 @@ pub struct SubnetInfo {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn get_subnet_info(netuid: u16) -> Option<SubnetInfo> {
-        if !Self::if_subnet_exist(netuid) {
+	pub fn get_net_info() -> Option<NetInfo> {
+        if !Self::if_subnet_exist() {
             return None;
         }
 
-        let immunity_period = Self::get_immunity_period(netuid);
-        let min_allowed_weights = Self::get_min_allowed_weights(netuid);
-        let max_weights_limit = Self::get_max_weight_limit(netuid);
-        let subnetwork_n = Self::get_subnetwork_n(netuid);
-        let max_allowed_uids = Self::get_max_allowed_uids(netuid);
-        let blocks_since_last_step = Self::get_blocks_since_last_step(netuid);
-        let tempo = Self::get_tempo(netuid);
-        let emission_values = Self::get_emission_value(netuid);
+        let immunity_period = Self::get_immunity_period();
+        let min_allowed_weights = Self::get_min_allowed_weights();
+        let max_weights_limit = Self::get_max_weight_limit();
+        let max_allowed_uids = Self::get_max_allowed_uids();
+        let blocks_since_last_step = Self::get_blocks_since_last_step();
+        let tempo = Self::get_tempo();
+        let emission_values = Self::get_emission_value();
 
 
 
-        return Some(SubnetInfo {
+        return Some(NetInfo {
             immunity_period: immunity_period.into(),
             netuid: netuid.into(),
             min_allowed_weights: min_allowed_weights.into(),
             max_weights_limit: max_weights_limit.into(),
-            subnetwork_n: subnetwork_n.into(),
             max_allowed_uids: max_allowed_uids.into(),
             blocks_since_last_step: blocks_since_last_step.into(),
             tempo: tempo.into(),
@@ -49,26 +45,5 @@ impl<T: Config> Pallet<T> {
         })
 	}
 
-    pub fn get_subnets_info() -> Vec<Option<SubnetInfo>> {
-        let mut subnet_netuids = Vec::<u16>::new();
-        let mut max_netuid: u16 = 0;
-        for ( netuid, added ) in < NetworksAdded<T> as IterableStorageMap<u16, bool> >::iter() {
-            if added {
-                subnet_netuids.push(netuid);
-                if netuid > max_netuid {
-                    max_netuid = netuid;
-                }
-            }
-        }
-
-        let mut subnets_info = Vec::<Option<SubnetInfo>>::new();
-        for netuid_ in 0..(max_netuid + 1) {
-            if subnet_netuids.contains(&netuid_) {
-                subnets_info.push(Self::get_subnet_info(netuid_));
-            }
-        }
-
-        return subnets_info;
-	}
 }
 

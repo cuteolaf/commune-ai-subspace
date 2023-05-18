@@ -26,11 +26,9 @@ pub trait SubspaceCustomApi<BlockHash> {
 	#[method(name = "neuronInfo_getNeuron")]
 	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
-	#[method(name = "subnetInfo_getSubnetInfo")]
-	fn get_subnet_info(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-	#[method(name = "subnetInfo_getSubnetsInfo")]
-	fn get_subnets_info(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-}
+	#[method(name = "subnetInfo_getNetInfo")]
+	fn get_net_info(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+
 
 pub struct SubspaceCustom<C, P> {
 	/// Shared reference to the client.
@@ -74,7 +72,7 @@ where
 
 	fn get_neurons(
 		&self,
-		netuid: u16,
+		: u16,
 		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
