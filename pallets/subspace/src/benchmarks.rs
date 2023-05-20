@@ -29,15 +29,15 @@ benchmarks! {
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= "DefaultModule".as_bytes().to_vec();
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), name.into(), context.into(), tempo.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, n ); 
+    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into().try_into().unwrap(), name.into(), context.into(), tempo.into()));
+    Subspace::<T>::set_max_allowed_uids( n ); 
 
     // Lets fill the network with 100 UIDS and no weights.
     let mut seed : u32 = 1;
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
         let key: T::AccountId = account("Alice", 0, seed);
-        Subspace::<T>::append_neuron( netuid, &key, block_number );
+        Subspace::<T>::append_neuron( &key, block_number );
         seed = seed + 1;
     }
 
@@ -56,9 +56,9 @@ benchmarks! {
     let tempo: u16 = 1;
         let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
-    Subspace::<T>::do_add_network( caller_origin.clone(), netuid.try_into().unwrap(), name.into(), tempo.into());
-    Subspace::<T>::set_max_allowed_uids( netuid, n ); 
-    Subspace::<T>::set_tempo( netuid, tempo );
+    Subspace::<T>::do_add_network( caller_origin.clone().try_into().unwrap(), name.into(), tempo.into());
+    Subspace::<T>::set_max_allowed_uids( n ); 
+    Subspace::<T>::set_tempo( tempo );
 
     // Lets fill the network with 100 UIDS and no weights.
     let mut seed : u32 = 1;
@@ -66,11 +66,11 @@ benchmarks! {
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
         let key: T::AccountId = account("Alice", 0, SEED);
-        Subspace::<T>::append_neuron( netuid, &key, block_number );
+        Subspace::<T>::append_neuron( &key, block_number );
         SEED = SEED + 1;
         emission.push( ( key, 1 ) );
     }
-    Subspace::<T>::sink_emission( netuid, emission );
+    Subspace::<T>::sink_emission( emission );
  
   }: _( RawOrigin::Signed( caller.clone() ) )  */
 
@@ -90,13 +90,13 @@ benchmarks! {
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
     let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();
 
-    assert_ok!(Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), name.into(), context.into(), tempo.into()));
+    assert_ok!(Subspace::<T>::do_add_network( RawOrigin::Root.into().try_into().unwrap(), name.into(), context.into(), tempo.into()));
     
     let mut seed : u32 = 1;
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
     let key: T::AccountId = account("Alice", 0, seed);
         
-  }: register( RawOrigin::Signed( caller.clone() ), netuid  )
+  }: register( RawOrigin::Signed( caller.clone() )  )
 
   benchmark_set_weights {
     
@@ -109,9 +109,9 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
    
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
+    Subspace::<T>::set_max_allowed_uids( 4096 ); 
 
-   assert_ok!(Subspace::<T>::do_sudo_set_max_registrations_per_block(RawOrigin::Root.into(), netuid.try_into().unwrap(), 4096 ));
+   assert_ok!(Subspace::<T>::do_sudo_set_max_registrations_per_block(RawOrigin::Root.into().try_into().unwrap(), 4096 ));
     
     let mut seed : u32 = 1; 
     let mut dests: Vec<u16> = vec![];
@@ -131,14 +131,14 @@ benchmarks! {
       
       let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
       
-      assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), name.clone(), ip.clone(), port, context.clone() )); 
+      assert_ok!( Subspace::<T>::do_registration(caller_origin.clone().try_into().unwrap(), name.clone(), ip.clone(), port, context.clone() )); 
 
-      let uid = Subspace::<T>::get_uid_for_key(netuid, &key.clone()).unwrap();
+      let uid = Subspace::<T>::get_uid_for_key( &key.clone()).unwrap();
       dests.push(id.clone());
       weights.push(id.clone());
     }
 
-  }: set_weights(RawOrigin::Signed( signer.clone() ), netuid, dests, weights)
+  }: set_weights(RawOrigin::Signed( signer.clone() ), dests, weights)
 
 
   benchmark_add_stake {
@@ -150,7 +150,7 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  context.into(), tempo, n ));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
+    Subspace::<T>::set_max_allowed_uids( 4096 ); 
     assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
@@ -158,7 +158,7 @@ benchmarks! {
     let mut seed : u32 = 1;
     let key: T::AccountId = account("Alice", 0, seed);
 
-    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap() , name.clone(), ip.clone(), port, context.clone() ));
+    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone().try_into().unwrap() , name.clone(), ip.clone(), port, context.clone() ));
 
     let amount: u64 = 1;
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000000);
@@ -177,7 +177,7 @@ benchmarks! {
     let netuid = Subspace::<T>::get_netuid_for_name(name.clone()).unwrap();
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
+    Subspace::<T>::set_max_allowed_uids( 4096 ); 
     assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
@@ -185,7 +185,7 @@ benchmarks! {
     let mut seed : u32 = 1;
     let key: T::AccountId = caller; 
 
-    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap() , name.clone(), ip.clone(), port, context.clone()));
+    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone().try_into().unwrap() , name.clone(), ip.clone(), port, context.clone()));
 
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000000);
     Subspace::<T>::add_balance_to_account(&key.clone(), amoun_to_be_staked.unwrap());
@@ -208,9 +208,9 @@ benchmarks! {
     let placeholder1: u8 = 0;
     let placeholder2: u8 = 0;
 
-    Subspace::<T>::set_serving_rate_limit(netuid, 0);
+    Subspace::<T>::set_serving_rate_limit( 0);
 
-  }: serve_neuron(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2)
+  }: serve_neuron(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
   benchmark_serve_prometheus {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
@@ -222,9 +222,9 @@ benchmarks! {
     let ip_type: u8 = 4;
     
 
-    Subspace::<T>::set_serving_rate_limit(netuid, 0);
+    Subspace::<T>::set_serving_rate_limit( 0);
 
-  }: serve_prometheus(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type)
+  }: serve_prometheus(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type)
 
 
   benchmark_sudo_add_network {
@@ -233,7 +233,7 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
-  }: sudo_add_network(RawOrigin::<AccountIdOf<T>>::Root, netuid, name, tempo,)
+  }: sudo_add_network(RawOrigin::<AccountIdOf<T>>::Root, name, tempo,)
 
   benchmark_sudo_remove_network {
     let netuid: u16 = 1;
@@ -243,7 +243,7 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
-  }: sudo_remove_network(RawOrigin::<AccountIdOf<T>>::Root, netuid)
+  }: sudo_remove_network(RawOrigin::<AccountIdOf<T>>::Root)
 
   // benchmark_sudo_set_emission_values{
   //   let tempo: u16 = 1;
@@ -262,7 +262,7 @@ benchmarks! {
   //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
   //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into())); 
 
-  // }: sudo_set_emission_values(RawOrigin::<AccountIdOf<T>>::Root, netuids, emission)
+  // }: sudo_set_emission_values(RawOrigin::<AccountIdOf<T>>::Roots, emission)
 
 
   benchmark_sudo_set_default_take {
@@ -274,7 +274,7 @@ benchmarks! {
     let serving_rate_limit: u64 = 100;
     let netuid: u16 = 1;
 
-  }: sudo_set_serving_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, serving_rate_limit)
+  }: sudo_set_serving_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, serving_rate_limit)
 
   benchmark_sudo_set_weights_set_rate_limit {
     let n: u16 = 4096; 
@@ -286,7 +286,7 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
-  }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_set_rate_limit)
+  }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, weights_set_rate_limit)
 
 
 
@@ -300,7 +300,7 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
-  }: sudo_set_adjustment_interval(RawOrigin::<AccountIdOf<T>>::Root, netuid, adjustment_interval)
+  }: sudo_set_adjustment_interval(RawOrigin::<AccountIdOf<T>>::Root, adjustment_interval)
 
   benchmark_sudo_set_target_registrations_per_interval {
     let n: u16 = 4096;
@@ -312,7 +312,7 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
-  }: sudo_set_target_registrations_per_interval(RawOrigin::<AccountIdOf<T>>::Root, netuid, target_registrations_per_interval)
+  }: sudo_set_target_registrations_per_interval(RawOrigin::<AccountIdOf<T>>::Root, target_registrations_per_interval)
 
   benchmark_sudo_set_activity_cutoff {
     let n: u16 = 4096;
@@ -322,7 +322,7 @@ benchmarks! {
     let activity_cutoff: u16 = 300;
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_activity_cutoff(RawOrigin::<AccountIdOf<T>>::Root, netuid, activity_cutoff)
+  }: sudo_set_activity_cutoff(RawOrigin::<AccountIdOf<T>>::Root, activity_cutoff)
 
 
   benchmark_sudo_set_max_allowed_uids {
@@ -334,7 +334,7 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_max_allowed_uids(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_allowed_uids)
+  }: sudo_set_max_allowed_uids(RawOrigin::<AccountIdOf<T>>::Root, max_allowed_uids)
 
   benchmark_sudo_set_min_allowed_weights {
     let n : u32 = 4096;
@@ -345,7 +345,7 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, netuid, min_allowed_weights)
+  }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, min_allowed_weights)
 
 
 
@@ -359,7 +359,7 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_immunity_period(RawOrigin::<AccountIdOf<T>>::Root, netuid, immunity_period)
+  }: sudo_set_immunity_period(RawOrigin::<AccountIdOf<T>>::Root, immunity_period)
 
   benchmark_sudo_set_max_weight_limit {
     let n: u16 = 4096;
@@ -371,7 +371,7 @@ benchmarks! {
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
-  }: sudo_set_max_weight_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_weight_limit)
+  }: sudo_set_max_weight_limit(RawOrigin::<AccountIdOf<T>>::Root, max_weight_limit)
 
   benchmark_sudo_set_max_registrations_per_block {
 
@@ -383,6 +383,6 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into(), n.into()));
     let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_registrations_per_block)
+  }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, max_registrations_per_block)
 
 

@@ -7,12 +7,8 @@ use alloc::vec::Vec;
 sp_api::decl_runtime_apis! {
 
 	pub trait NeuronInfoRuntimeApi {
-		fn get_neurons(netuid: u16) -> Vec<u8>;
-		fn get_neuron(netuid: u16, uid: u16) -> Vec<u8>;
+		fn get_neurons() -> Vec<u8>;
+		fn get_neuron(uid: u16) -> Vec<u8>;
 	}
 
-	pub trait NetInfoRuntimeApi {
-		fn get_net_info(netuid: u16) -> Vec<u8>;
-		fn get_nets_info() -> Vec<u8>;
-	}
 }

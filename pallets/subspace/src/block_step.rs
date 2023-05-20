@@ -30,7 +30,7 @@ impl<T: Config> Pallet<T> {
         //   2        1               0
         //   100      0              99
         //   100      1              98
-        return tempo as u64 - ( block_number + netuid as u64 + 1 ) % ( tempo as u64 + 1 )
+        return tempo as u64 - ( block_number  as u64 + 1 ) % ( tempo as u64 + 1 )
     }
 
  
@@ -38,7 +38,7 @@ impl<T: Config> Pallet<T> {
     // the remaining tuples to sink and the block number
     //
     pub fn tuples_to_drain_this_block( tempo: u16, block_number: u64, n_remaining: usize ) -> usize {
-        let blocks_until_epoch: u64 = Self::blocks_until_next_epoch( netuid, tempo, block_number );  
+        let blocks_until_epoch: u64 = Self::blocks_until_next_epoch( tempo, block_number );  
         if blocks_until_epoch / 2 == 0 { return n_remaining } // drain all.
         if tempo / 2 == 0 { return n_remaining } // drain all
         if n_remaining == 0 { return 0 } // nothing to drain at all.
@@ -52,21 +52,21 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn has_loaded_emission_tuples( netuid: u16 ) -> bool { LoadedEmission::<T>::contains_key( netuid ) }
-    pub fn get_loaded_emission_tuples( netuid: u16 ) -> Vec<(T::AccountId, u64)> { LoadedEmission::<T>::get( netuid ).unwrap() }
+    pub fn has_loaded_emission_tuples( netuid: u16 ) -> bool { LoadedEmission::<T>::contains_key() }
+    pub fn get_loaded_emission_tuples( netuid: u16 ) -> Vec<(T::AccountId, u64)> { LoadedEmission::<T>::get().unwrap() }
 
     // Reads from the loaded emission storage which contains lists of pending emission tuples ( key, amount )
     // and distributes small chunks of them at a time.
     //
     pub fn drain_emission( _: u64 ) {
         // --- 1. We iterate across each network.
-        for ( netuid, _ ) in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-            if !Self::has_loaded_emission_tuples( netuid ) { continue } // There are no tuples to emit.
-            let tuples_to_drain: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples( netuid );
+        for ( _ ) in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+            if !Self::has_loaded_emission_tuples() { continue } // There are no tuples to emit.
+            let tuples_to_drain: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples();
             for (key, amount) in tuples_to_drain.iter() {                 
                 Self::emit_inflation_through_account( &key, *amount );
             }            
-            LoadedEmission::<T>::remove( netuid );
+            LoadedEmission::<T>::remove();
         }
     }
 
@@ -77,26 +77,26 @@ impl<T: Config> Pallet<T> {
     pub fn generate_emission( block_number: u64 ) {
 
         // --- 1. Iterate through network ids.
-        for ( netuid, tempo )  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+        for ( tempo )  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
 
             // --- 2. Queue the emission due to this network.
-            let new_queued_emission = EmissionValues::<T>::get( netuid );
-            PendingEmission::<T>::mutate( netuid, | queued | *queued += new_queued_emission );
-            log::debug!("netuid_i: {:?} queued_emission: +{:?} ", netuid, new_queued_emission );  
+            let new_queued_emission = EmissionValues::<T>::get();
+            PendingEmission::<T>::mutate( | queued | *queued += new_queued_emission );
+            log::debug!("netuid_i: {:?} queued_emission: +{:?} ", new_queued_emission );  
             // --- 3. Check to see if this network has reached tempo.
-            if Self::blocks_until_next_epoch( netuid, tempo, block_number ) != 0 {
+            if Self::blocks_until_next_epoch( tempo, block_number ) != 0 {
                 // --- 3.1 No epoch, increase blocks since last step and continue,
-                Self::set_blocks_since_last_step( netuid, Self::get_blocks_since_last_step( netuid ) + 1 );
+                Self::set_blocks_since_last_step( Self::get_blocks_since_last_step() + 1 );
                 continue;
             }
 
             // --- 4 This network is at tempo and we are running its epoch.
             // First frain the queued emission.
-            let emission_to_drain:u64 = PendingEmission::<T>::get( netuid ); 
-            PendingEmission::<T>::insert( netuid, 0 );
+            let emission_to_drain:u64 = PendingEmission::<T>::get(); 
+            PendingEmission::<T>::insert( 0 );
 
             // --- 5. Run the epoch mechanism and return emission tuples for keys in the network.
-            let emission_tuples_this_block: Vec<(T::AccountId, u64)> = Self::epoch( netuid, emission_to_drain );
+            let emission_tuples_this_block: Vec<(T::AccountId, u64)> = Self::epoch( emission_to_drain );
                 
             // --- 6. Check that the emission does not exceed the allowed total.
             let emission_sum: u128 = emission_tuples_this_block.iter().map( |(_account_id, e)| *e as u128 ).sum();
@@ -104,16 +104,16 @@ impl<T: Config> Pallet<T> {
 
             // --- 7. Sink the emission tuples onto the already loaded.
             let mut concat_emission_tuples: Vec<(T::AccountId, u64)> = emission_tuples_this_block.clone();
-            if Self::has_loaded_emission_tuples( netuid ) {
+            if Self::has_loaded_emission_tuples() {
                 // 7.a We already have loaded emission tuples, so we concat the new ones.
-                let mut current_emission_tuples: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples( netuid );
+                let mut current_emission_tuples: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples();
                 concat_emission_tuples.append( &mut current_emission_tuples );
             } 
-            LoadedEmission::<T>::insert( netuid, concat_emission_tuples );
+            LoadedEmission::<T>::insert( concat_emission_tuples );
 
             // --- 8 Set counters.
-            Self::set_blocks_since_last_step( netuid, 0 );
-            Self::set_last_mechanism_step_block( netuid, block_number );        
+            Self::set_blocks_since_last_step( 0 );
+            Self::set_last_mechanism_step_block( block_number );        
         }
     }
     // Distributes token inflation through the key based on emission. The call ensures that the inflation
@@ -159,13 +159,13 @@ impl<T: Config> Pallet<T> {
     pub fn adjust_registration_terms_for_networks( ) {
         
         // --- 1. Iterate through each network.
-        for ( netuid, _ )  in <NetworksAdded<T> as IterableStorageMap<u16, bool>>::iter(){
+        for ( _ )  in <NetworksAdded<T> as IterableStorageMap<u16, bool>>::iter(){
 
-            let last_adjustment_block: u64 = Self::get_last_adjustment_block( netuid );
-            let adjustment_interval: u16 = Self::get_adjustment_interval( netuid );
+            let last_adjustment_block: u64 = Self::get_last_adjustment_block();
+            let adjustment_interval: u16 = Self::get_adjustment_interval();
             let current_block: u64 = Self::get_current_block_as_u64( ); 
             log::debug!("netuid: {:?} last_adjustment_block: {:?} adjustment_interval: {:?} current_block: {:?}", 
-                netuid,
+                
                 last_adjustment_block,
                 adjustment_interval,
                 current_block
@@ -175,17 +175,17 @@ impl<T: Config> Pallet<T> {
             // If so, we need to adjust the registration based on target and actual registrations.
             if ( current_block - last_adjustment_block ) >= adjustment_interval as u64 {
 
-                let registrations_this_interval: u16 = Self::get_registrations_this_interval( netuid );
-                let pow_registrations_this_interval: u16 = Self::get_pow_registrations_this_interval( netuid );
-                let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval( netuid );
+                let registrations_this_interval: u16 = Self::get_registrations_this_interval();
+                let pow_registrations_this_interval: u16 = Self::get_pow_registrations_this_interval();
+                let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval();
 
                 // --- 6. Drain all counters for this network for this interval.
-                Self::set_last_adjustment_block( netuid, current_block );
-                Self::set_registrations_this_interval( netuid, 0 );
+                Self::set_last_adjustment_block( current_block );
+                Self::set_registrations_this_interval( 0 );
             }
 
             // --- 7. Drain block registrations for each network. Needed for registration rate limits.
-            Self::set_registrations_this_block( netuid, 0 );
+            Self::set_registrations_this_block( 0 );
         }
     }
 

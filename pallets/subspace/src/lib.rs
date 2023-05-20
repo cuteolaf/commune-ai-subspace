@@ -147,12 +147,10 @@ pub mod pallet {
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] // --- ITEM ( total_issuance )
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a key.
-    pub type TotalKeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
-    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
-	pub type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
+	#[pallet::storage] // --- VALUE --> stake | Returns the total amount of stake under a key.
+    pub type TotalKeyStake<T:Config> = StorageValue<_, u64, ValueQuery, DefaultAccountTake<T>>;
+	#[pallet::storage] // --- MAP ( key ) --> stake | Returns the stake under a key prefixed by key.
+	pub type Stake<T:Config> = StorageValue<_, u64, ValueQuery, DefaultAccountTake<T>>;
 
 	#[pallet::type_value] 
 	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
@@ -160,12 +158,12 @@ pub mod pallet {
 	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
 	#[pallet::type_value] 
 	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
-	#[pallet::storage] // --- MAP ( netuid ) -->  Block at last adjustment.
-	pub type LastAdjustmentBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> Registration this Block.
-	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
+	#[pallet::storage] // -->  Block at last adjustment.
+	pub type LastAdjustmentBlock<T> = StorageValue<_, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
+	#[pallet::storage] // ) --> Registration this Block.
+	pub type RegistrationsThisBlock<T> = StorageValue<_,  u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
 	#[pallet::storage] // --- ITEM( global_max_registrations_per_block ) 
-	pub type MaxRegistrationsPerBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
+	pub type MaxRegistrationsPerBlock<T> = StorageValue<_,  u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	// ==============================
 	// ==== Subnetworks Storage =====
@@ -183,14 +181,14 @@ pub mod pallet {
 
 
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
-	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
+	pub type N<T:Config> = StorageValue<_, u16, ValueQuery>;
+	#[pallet::storage] // --- MAP () --> subnetwork_n (Number of UIDs in the network).
 	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> network_is_added
+	#[pallet::storage] // --- MAP () --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
-	#[pallet::storage] // --- DMAP ( netuid, netuid ) -> registration_requirement
+	#[pallet::storage] // --- DMAP () -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
+	#[pallet::storage] // --- DMAP ( key ) --> bool
 	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	// ==============================
@@ -207,15 +205,15 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultTempo<T: Config>() -> u16 { T::InitialTempo::get() }
 
-	#[pallet::storage] // --- MAP ( netuid ) --> tempo
+	#[pallet::storage] // --- MAP () --> tempo
 	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> emission_values
+	#[pallet::storage] // --- MAP () --> emission_values
 	pub type EmissionValues<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
-	#[pallet::storage] // --- MAP ( netuid ) --> pending_emission
+	#[pallet::storage] // --- MAP () --> pending_emission
 	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
-	#[pallet::storage] // --- MAP ( netuid ) --> blocks_since_last_step.
+	#[pallet::storage] // --- MAP () --> blocks_since_last_step.
 	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
-	#[pallet::storage] // --- MAP ( netuid ) --> last_mechanism_step_block
+	#[pallet::storage] // --- MAP () --> last_mechanism_step_block
 	pub type LastMechansimStepBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
 
 	// =================================
@@ -259,9 +257,9 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultServingRateLimit<T: Config>() -> u64 { T::InitialServingRateLimit::get() }
 
-	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
+	#[pallet::storage] // --- MAP () --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-	#[pallet::storage] // --- MAP ( netuid, key ) --> neuron_info
+	#[pallet::storage] // --- MAP ( key ) --> neuron_info
 	pub(super) type Neurons<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, NeuronInfo, OptionQuery>;
 	
 	// =======================================
@@ -288,33 +286,30 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type NeuronNamespace<T: Config> = StorageDoubleMap<_, Twox64Concat, u16, Twox64Concat, Vec<u8>, T::AccountId, ValueQuery, DefaultKey<T>>;
-	
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
-	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>,  u16 , ValueQuery>;
-	
-	#[pallet::storage] // --- MAP ( netuid ) --> uid, we use to record uids to prune at next epoch.
+		
+	#[pallet::storage] // --- MAP () --> uid, we use to record uids to prune at next epoch.
     pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> registrations_this_interval
+	#[pallet::storage] // --- MAP () --> registrations_this_interval
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> pow_registrations_this_interval
+	#[pallet::storage] // --- MAP () --> pow_registrations_this_interval
 	pub type POWRegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_uids
+	#[pallet::storage] // --- MAP () --> max_allowed_uids
 	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> immunity_period
+	#[pallet::storage] // --- MAP () --> immunity_period
 	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> activity_cutoff
+	#[pallet::storage] // --- MAP () --> activity_cutoff
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_weight_limit
+	#[pallet::storage] // --- MAP () --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
+	#[pallet::storage] // --- MAP () --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> adjustment_interval
+	#[pallet::storage] // --- MAP () --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
+	#[pallet::storage] // --- MAP () --> weights_set_rate_limit
 	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> target_registrations_this_interval
+	#[pallet::storage] // --- MAP () --> target_registrations_this_interval
 	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> block_at_registration
+	#[pallet::storage] // --- DMAP ( uid ) --> block_at_registration
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	// =======================================
@@ -333,32 +328,33 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] // --- DMAP ( netuid, key ) --> uid
+	#[pallet::storage] // --- DMAP ( key ) --> uid
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> key
+	#[pallet::storage] // --- DMAP ( uid ) --> key
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 
-	#[pallet::storage] // --- DMAP ( netuid ) --> emission
+	#[pallet::storage] // --- DMAP () --> emission
 	pub(super) type LoadedEmission<T:Config> = StorageMap< _, Identity, u16, Vec<(T::AccountId, u64)>, OptionQuery >;
 
-	#[pallet::storage] // --- DMAP ( netuid ) --> active
+	#[pallet::storage] // --- DMAP () --> active
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
-	#[pallet::storage] // --- DMAP ( netuid ) --> rank
+	#[pallet::storage] // --- DMAP () --> rank
 	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> incentive
+	#[pallet::storage] // --- DMAP () --> incentive
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> dividends
+	#[pallet::storage] // --- DMAP () --> dividends
 	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> dividends
+	#[pallet::storage] // --- DMAP () --> dividends
 	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> last_update
+	#[pallet::storage] // --- DMAP () --> last_update
 	pub(super) type LastUpdate<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> pruning_scores
+	#[pallet::storage] // --- DMAP () --> pruning_scores
+	
 	pub(super) type PruningScores<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T> >;
 
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> weights
+	#[pallet::storage] // --- DMAP ( uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> bonds
+	#[pallet::storage] // --- DMAP ( uid ) --> bonds
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
 
 	// Pallets use events to inform users when important changes are made.
@@ -464,29 +460,20 @@ pub mod pallet {
 			let netuid = TotalNetworks::<T>::get();
 			TotalNetworks::<T>::mutate( |n| *n += 1 );
 	
-			// --- 2. Set network neuron count to 0 size.
-			SubnetworkN::<T>::insert( netuid, 0 );
-	
-			// --- 3. Set this network uid to alive.
-			NetworksAdded::<T>::insert( netuid, true );
-			
+
 			// --- 4. Fill tempo memory item.
-			Tempo::<T>::insert( netuid, tempo );
+			Tempo::<T>::put( tempo );
 	
 		
-			MaxAllowedUids::<T>::insert( netuid, n );
+			MaxAllowedUids::<T>::put( n );
 	
-			// --- 5. Increase total network count.
-			TotalNetworks::<T>::mutate( |n| *n += 1 );
-	
-			SubnetNamespace::<T>::insert(name.clone(),  netuid );
 
 			
 			// --- Fill tempo memory item.
-			Tempo::<T>::insert(netuid, tempo);
+			Tempo::<T>::put( tempo);
 
 			// Set max allowed uids
-			MaxAllowedUids::<T>::insert(netuid, n);
+			MaxAllowedUids::<T>::put( n);
 
 			let mut next_uid = 0;
 
@@ -512,7 +499,6 @@ pub mod pallet {
 					// Fill stake information.
 	
 					TotalKeyStake::<T>::insert(key.clone(), stake);
-					TotalColdkeyStake::<T>::insert(coldkey.clone(), TotalColdkeyStake::<T>::get(coldkey).saturating_add(*stake));
 
 					// Update total issuance value
 					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
@@ -569,9 +555,7 @@ pub mod pallet {
 		// 	* `origin`: (<T as frame_system::Config>Origin):
 		// 		- The caller, a key who wishes to set their weights.
 		//
-		// 	* `netuid` (u16):
-		// 		- The network uid we are setting these weights on.
-		// 
+
 		// 	* `dests` (Vec<u16>):
 		// 		- The edge endpoint for the weight, i.e. j for w_ij.
 		//
@@ -615,7 +599,7 @@ pub mod pallet {
 			dests: Vec<u16>, 
 			weights: Vec<u16>,
 		) -> DispatchResult {
-			Self::do_set_weights( origin, netuid, dests, weights )
+			Self::do_set_weights( origin, dests, weights )
 		}
 
 
@@ -777,10 +761,7 @@ pub mod pallet {
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
 		// 		- The signature of the calling key.
-		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
+
 		// 	* 'block_number' ( u64 ):
 		// 		- Block hash used to prove work done.
 		//
@@ -857,8 +838,8 @@ pub mod pallet {
 
 		#[pallet::weight((Weight::from_ref_time(10_000_000)
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>, netuid: u16, serving_rate_limit: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_serving_rate_limit( origin, netuid, serving_rate_limit )
+		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>: u16, serving_rate_limit: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_serving_rate_limit( origin, serving_rate_limit )
 		}
 
 		// Sudo call for setting tx rate limit
@@ -870,61 +851,61 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(15_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )
+		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_weights_set_rate_limit( origin, weights_set_rate_limit )
 		}
 
 
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>, netuid: u16, adjustment_interval: u16 ) -> DispatchResult { 
-			Self::do_set_adjustment_interval( origin, netuid, adjustment_interval )
+		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>: u16, adjustment_interval: u16 ) -> DispatchResult { 
+			Self::do_set_adjustment_interval( origin, adjustment_interval )
 		}
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_target_registrations_per_interval( origin:OriginFor<T>, netuid: u16, target_registrations_per_interval: u16 ) -> DispatchResult {
-			Self::do_sudo_set_target_registrations_per_interval( origin, netuid, target_registrations_per_interval )
+		pub fn sudo_set_target_registrations_per_interval( origin:OriginFor<T>: u16, target_registrations_per_interval: u16 ) -> DispatchResult {
+			Self::do_sudo_set_target_registrations_per_interval( origin, target_registrations_per_interval )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>, netuid: u16, activity_cutoff: u16 ) -> DispatchResult {
-			Self::do_sudo_set_activity_cutoff( origin, netuid, activity_cutoff )
+		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>: u16, activity_cutoff: u16 ) -> DispatchResult {
+			Self::do_sudo_set_activity_cutoff( origin, activity_cutoff )
 		}
 
 		#[pallet::weight((Weight::from_ref_time(18_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>, netuid: u16, max_allowed_uids: u16 ) -> DispatchResult {
-			Self::do_sudo_set_max_allowed_uids(origin, netuid, max_allowed_uids )
+		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>: u16, max_allowed_uids: u16 ) -> DispatchResult {
+			Self::do_sudo_set_max_allowed_uids(origin, max_allowed_uids )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_allowed_weights( origin:OriginFor<T>, netuid: u16, min_allowed_weights: u16 ) -> DispatchResult {
-			Self::do_sudo_set_min_allowed_weights( origin, netuid, min_allowed_weights )
+		pub fn sudo_set_min_allowed_weights( origin:OriginFor<T>: u16, min_allowed_weights: u16 ) -> DispatchResult {
+			Self::do_sudo_set_min_allowed_weights( origin, min_allowed_weights )
 		}
 
 
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_immunity_period( origin:OriginFor<T>, netuid: u16, immunity_period: u16 ) -> DispatchResult {
-			Self::do_sudo_set_immunity_period( origin, netuid, immunity_period )
+		pub fn sudo_set_immunity_period( origin:OriginFor<T>: u16, immunity_period: u16 ) -> DispatchResult {
+			Self::do_sudo_set_immunity_period( origin, immunity_period )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>, netuid: u16, max_weight_limit: u16 ) -> DispatchResult {
-			Self::do_sudo_set_max_weight_limit( origin, netuid, max_weight_limit )
+		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>: u16, max_weight_limit: u16 ) -> DispatchResult {
+			Self::do_sudo_set_max_weight_limit( origin, max_weight_limit )
 		}
 		#[pallet::weight((Weight::from_ref_time(15_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_registrations_per_block(origin: OriginFor<T>, netuid: u16, max_registrations_per_block: u16 ) -> DispatchResult {
-			Self::do_sudo_set_max_registrations_per_block(origin, netuid, max_registrations_per_block )
+		pub fn sudo_set_max_registrations_per_block(origin: OriginFor<T>: u16, max_registrations_per_block: u16 ) -> DispatchResult {
+			Self::do_sudo_set_max_registrations_per_block(origin, max_registrations_per_block )
 		}
 
 
@@ -953,11 +934,11 @@ pub mod pallet {
 	// ---- Subspace helper functions.
 	impl<T: Config> Pallet<T> {
 		// --- Returns the transaction priority for setting weights.
-		pub fn get_priority_set_weights( key: &T::AccountId, netuid: u16 ) -> u64 {
-			if Uids::<T>::contains_key( netuid, &key ) {
-				let uid = Self::get_uid_for_key(netuid, &key.clone()).unwrap();
+		pub fn get_priority_set_weights( key: &T::AccountId: u16 ) -> u64 {
+			if Uids::<T>::contains_key( &key ) {
+				let uid = Self::get_uid_for_key( &key.clone()).unwrap();
 				let current_block_number: u64 = Self::get_current_block_as_u64();
-				return current_block_number - Self::get_last_update_for_uid(netuid, uid as u16);
+				return current_block_number - Self::get_last_update_for_uid( uid as u16);
 			}
 			return 0;
 		}
@@ -1002,10 +983,10 @@ impl<T: Config + Send + Sync + TypeInfo> SubspaceSignedExtension<T> where
 		return u64::max_value();
 	}
 
-	pub fn get_priority_set_weights( who: &T::AccountId, netuid: u16 ) -> u64 {
+	pub fn get_priority_set_weights( who: &T::AccountId: u16 ) -> u64 {
 		// Return the non vanilla priority for a set weights call.
 
-		return Pallet::<T>::get_priority_set_weights( who, netuid );
+		return Pallet::<T>::get_priority_set_weights( who );
 	}
 
 	pub fn u64_to_balance( input: u64 ) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance> { input.try_into().ok() }
@@ -1043,7 +1024,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
 		_len: usize,
 	) -> TransactionValidity {
 		match call.is_sub_type() {
-			Some(Call::set_weights{netuid, ..}) => {
+			Some(Call::set_weights{..}) => {
 				let priority: u64 = Self::get_priority_set_weights(who, *netuid);
                 Ok(ValidTransaction {
                     priority: priority,

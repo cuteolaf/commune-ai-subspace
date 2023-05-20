@@ -22,12 +22,12 @@ pub use subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi;
 pub trait SubspaceCustomApi<BlockHash> {
 
 	#[method(name = "neuronInfo_getNeurons")]
-	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	fn get_neurons(&self: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 	#[method(name = "neuronInfo_getNeuron")]
-	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	fn get_neuron(&self: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
 	#[method(name = "subnetInfo_getNetInfo")]
-	fn get_net_info(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	fn get_net_info(&self: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
 
 pub struct SubspaceCustom<C, P> {
@@ -78,7 +78,7 @@ where
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_neurons(at, netuid).map_err(|e| {
+		api.get_neurons(at).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to get neurons info.",
@@ -95,7 +95,7 @@ where
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_neuron(at, netuid, uid).map_err(|e| {
+		api.get_neuron(at, uid).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to get neuron info.",
@@ -104,11 +104,11 @@ where
 		})
 	}
 	
-	fn get_subnet_info(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
+	fn get_subnet_info(&self,  at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnet_info(at, netuid).map_err(|e| {
+		api.get_subnet_info(at).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to get subnet info.",

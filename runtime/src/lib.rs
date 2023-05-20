@@ -651,7 +651,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_neuron(netuid: u16, uid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_neuron(netuid, uid);
+			let _result = SubspaceModule::get_neuron( uid);
 			if _result.is_some() {
 				let result = _result.expect("Could not get NeuronInfo");
 				result.encode()

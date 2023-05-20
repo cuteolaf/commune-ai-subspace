@@ -60,7 +60,7 @@ impl<T: Config> Pallet<T> {
         log::info!("do_registration( key:{:?} )", key );
 
         // --- 4. Ensure that the key is not already registered.
-        let already_registered: bool  = Uids::<T>::contains_key( netuid, &key ); 
+        let already_registered: bool  = Uids::<T>::contains_key(&key ); 
 
         let current_block_number: u64 = Self::get_current_block_as_u64();
         let mut uid: u16;
@@ -72,61 +72,61 @@ impl<T: Config> Pallet<T> {
         
 
             // Possibly there is no neuron slots at all.
-            ensure!( Self::get_max_allowed_uids( netuid ) != 0, Error::<T>::NetworkDoesNotExist );
+            ensure!( Self::get_max_allowed_uids() != 0, Error::<T>::NetworkDoesNotExist );
             
-            if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
+            if current_subnetwork_n < Self::get_max_allowed_uids() {
 
                 // --- 12.1.1 No replacement required, the uid appends the subnetwork.
                 // We increment the subnetwork count here but not below.
                 uid = current_subnetwork_n;
 
                 // --- 12.1.2 Expand subnetwork with new account.
-                Self::append_neuron( netuid, &key );
+                Self::append_neuron(  &key );
                 log::info!("add new neuron account");
             } else {
                 // --- 12.1.1 Replacement required.
                 // We take the neuron with the lowest pruning score here.
-                uid = Self::get_neuron_to_prune( netuid );
+                uid = Self::get_neuron_to_prune();
 
                 // --- 12.1.1 Replace the neuron account with the new info.
-                Self::replace_neuron( netuid, uid, &key );
+                Self::replace_neuron( uid, &key );
                 log::info!("prune neuron");
             }
 
             // --- Record the registration and increment block and interval counters.
-            RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
-            RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
+            RegistrationsThisInterval::<T>::mutate( |val| *val += 1 );
+            RegistrationsThisBlock::<T>::mutate(|val| *val += 1 );
             // ---Deposit successful event.
-            log::info!("NeuronRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, uid, key );
-            Self::deposit_event( Event::NeuronRegistered( netuid, uid, key.clone() ) );
+            log::info!("NeuronRegistered(  uid:{:?} key:{:?}  ) ",  uid, key );
+            Self::deposit_event( Event::NeuronRegistered( uid, key.clone() ) );
     
         }
 
 
-        Self::do_update_neuron(origin.clone(),  netuid, ip, port, name, context );
+        Self::do_update_neuron(origin.clone(),  ip, port, name, context );
 
         // --- 16. Ok and done.
         Ok(())
     }
 
 
-    pub fn do_transfer_registration(  origin: T::RuntimeOrigin, netuid: u16, uid: u16, new_key: T::AccountId ) -> DispatchResult {
+    pub fn do_transfer_registration(  origin: T::RuntimeOrigin,  uid: u16, new_key: T::AccountId ) -> DispatchResult {
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
         let key = ensure_signed( origin.clone() )?;        
-        log::info!("do_transfer_registration( key:{:?} netuid:{:?} uid:{:?} new_key:{:?} )", key, netuid, uid, new_key );
+        log::info!("do_transfer_registration( key:{:?} netuid:{:?} uid:{:?} new_key:{:?} )", key, uid, new_key );
 
         // --- 2. Ensure the passed network is valid.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
+        ensure!( Self::if_subnet_exist(  ), Error::<T>::NetworkDoesNotExist ); 
 
         // --- 3. Ensure the key is already registered.
-        ensure!( Uids::<T>::contains_key( netuid, &key ), Error::<T>::NotRegistered );
+        ensure!( Uids::<T>::contains_key( &key ), Error::<T>::NotRegistered );
 
         // --- 5. Ensure the passed block number is valid, not in the future or too old.
         // Work must have been done within 3 blocks (stops long range attacks).
         let current_block_number: u64 = Self::get_current_block_as_u64();
         // --- 10. If the network account does not exist we will create it here.
-        Self::replace_neuron( netuid, netuid, &key );
+        Self::replace_neuron(  &key );
 
         Ok(())
     }
@@ -143,17 +143,17 @@ impl<T: Config> Pallet<T> {
     // Determine which peer to prune from the network by finding the element with the lowest pruning score out of
     // immunity period. If all neurons are in immunity period, return node with lowest prunning score.
     // This function will always return an element to prune.
-    pub fn get_neuron_to_prune(netuid: u16) -> u16 {
+    pub fn get_neuron_to_prune() -> u16 {
         let mut min_score : u16 = u16::MAX;
         let mut min_score_in_immunity_period = u16::MAX;
         let mut uid_with_min_score = 0;
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
         if Self::get_n() == 0 { return 0 } // If there are no neurons in this network.
         for neuron_uid_i in 0..Self::get_n() {
-            let pruning_score:u16 = Self::get_pruning_score_for_uid( netuid, neuron_uid_i );
-            let block_at_registration: u64 = Self::get_neuron_block_at_registration( netuid, neuron_uid_i );
+            let pruning_score:u16 = Self::get_pruning_score_for_uid( neuron_uid_i );
+            let block_at_registration: u64 = Self::get_neuron_block_at_registration( neuron_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
-            let immunity_period: u64 = Self::get_immunity_period(netuid) as u64;
+            let immunity_period: u64 = Self::get_immunity_period() as u64;
             if min_score == pruning_score {
                 if current_block - block_at_registration <  immunity_period { //neuron is in immunity period
                     if min_score_in_immunity_period > pruning_score {
@@ -276,10 +276,10 @@ impl<T: Config> Pallet<T> {
             
         if prev_neuron.name.len() > 0 {
             let old_name = prev_neuron.name.clone();
-            NeuronNamespace::<T>::remove( netuid, old_name.clone() );
+            NeuronNamespace::<T>::remove( old_name.clone() );
         } 
-        ensure!(!Self::name_exists(netuid, name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
-        NeuronNamespace::<T>::insert( netuid, name.clone(), key.clone() );
+        ensure!(!Self::name_exists( name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
+        NeuronNamespace::<T>::insert( name.clone(), key.clone() );
 
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
         prev_neuron.name = name.clone();
@@ -336,7 +336,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 7. We deposit neuron served event.
         log::info!("NeuronServed( key:{:?} ) ", key.clone() );
-        Self::deposit_event(Event::NeuronServed( netuid, key.clone() ));
+        Self::deposit_event(Event::NeuronServed(  key.clone() ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -402,13 +402,13 @@ impl<T: Config> Pallet<T> {
 
 
     pub fn has_neuron_info( key: &T::AccountId ) -> bool {
-        return Neurons::<T>::contains_key( netuid, key );
+        return Neurons::<T>::contains_key( key );
     }
 
 
     pub fn get_neuron_info( key: &T::AccountId ) -> NeuronInfo {
-        if Self::has_neuron_info( netuid, key ) {
-            return Neurons::<T>::get( netuid, key ).unwrap();
+        if Self::has_neuron_info( key ) {
+            return Neurons::<T>::get( key ).unwrap();
         } else{
             return NeuronInfo { 
                 block: 0,

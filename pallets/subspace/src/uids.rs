@@ -11,7 +11,7 @@ impl<T: Config> Pallet<T> {
     // Replace the neuron under this uid.
     pub fn replace_neuron( uid_to_replace: u16, new_key: &T::AccountId ) {
 
-        log::debug!("replace_neuron( netuid: {:?} | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
+        log::debug!("replace_neuron( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
 
         // 1. Get the old key under this position.
         let old_key: T::AccountId = Keys::<T>::get( uid_to_replace );
@@ -88,13 +88,4 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-
-    // Return true if a key is registered on any network.
-    //
-    pub fn is_key_registered( key: &T::AccountId )-> bool {
-        for ( _, is_registered)  in <IsNetworkMember<T> as IterableStorageDoubleMap< T::AccountId, u16, bool >>::iter_prefix( key ){
-            if is_registered { return true }
-        }
-        false
-    }
 }

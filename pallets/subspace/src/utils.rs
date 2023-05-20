@@ -211,7 +211,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_max_registrations_per_block() -> u16 { MaxRegistrationsPerBlock::<T>::get( ) }
-    pub fn set_max_registrations_per_block( max_registrations_per_block: u16 ) { MaxRegistrationsPerBlock::<T>::insert( max_registrations_per_block ); }
+    pub fn set_max_registrations_per_block( max_registrations_per_block: u16 ) { MaxRegistrationsPerBlock::<T>::put( max_registrations_per_block ); }
     pub fn do_sudo_set_max_registrations_per_block(
         origin: T::RuntimeOrigin, 
         max_registrations_per_block: u16
