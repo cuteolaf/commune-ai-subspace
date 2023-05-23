@@ -52,7 +52,6 @@ mod benchmarks;
 // =========================
 //	==== Pallet Imports =====
 // =========================
-mod block_step;
 
 mod epoch;
 mod math;
@@ -60,7 +59,6 @@ mod network;
 mod neuron;
 mod registration;
 mod staking;
-mod uids;
 mod weights;
 
 pub mod neuron_info;
