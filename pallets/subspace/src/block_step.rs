@@ -11,7 +11,7 @@ impl<T: Config> Pallet<T> {
         let block_number: u64 = Self::get_current_block_as_u64();
         log::debug!("block_step for block: {:?} ", block_number );
         // --- 1. Adjust difficulties.
-		Self::adjust_registration_terms_for_networks( );
+		Self::adjust_registration_terms_for_network( );
         // --- 2. Drains emission tuples ( key, amount ).
         Self::drain_emission( block_number );
         // --- 3. Generates emission tuples from epoch functions.
@@ -156,36 +156,34 @@ impl<T: Config> Pallet<T> {
 
     // Adjusts the network of every active network. Reseting state parameters.
     //
-    pub fn adjust_registration_terms_for_networks( ) {
+    pub fn adjust_registration_terms_for_network( ) {
         
         // --- 1. Iterate through each network.
-        for ( _ )  in <NetworksAdded<T> as IterableStorageMap<u16, bool>>::iter(){
 
-            let last_adjustment_block: u64 = Self::get_last_adjustment_block();
-            let adjustment_interval: u16 = Self::get_adjustment_interval();
-            let current_block: u64 = Self::get_current_block_as_u64( ); 
-            log::debug!("netuid: {:?} last_adjustment_block: {:?} adjustment_interval: {:?} current_block: {:?}", 
-                
-                last_adjustment_block,
-                adjustment_interval,
-                current_block
-            );
+        let last_adjustment_block: u64 = Self::get_last_adjustment_block();
+        let adjustment_interval: u16 = Self::get_adjustment_interval();
+        let current_block: u64 = Self::get_current_block_as_u64( ); 
+        log::debug!("netuid: {:?} last_adjustment_block: {:?} adjustment_interval: {:?} current_block: {:?}", 
+            
+            last_adjustment_block,
+            adjustment_interval,
+            current_block
+        );
 
-            // --- 3. Check if we are at the adjustment interval for this network.
-            // If so, we need to adjust the registration based on target and actual registrations.
-            if ( current_block - last_adjustment_block ) >= adjustment_interval as u64 {
+        // --- 3. Check if we are at the adjustment interval for this network.
+        // If so, we need to adjust the registration based on target and actual registrations.
+        if ( current_block - last_adjustment_block ) >= adjustment_interval as u64 {
 
-                let registrations_this_interval: u16 = Self::get_registrations_this_interval();
-                let pow_registrations_this_interval: u16 = Self::get_pow_registrations_this_interval();
-                let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval();
+            let registrations_this_interval: u16 = Self::get_registrations_this_interval();
+            let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval();
 
-                // --- 6. Drain all counters for this network for this interval.
-                Self::set_last_adjustment_block( current_block );
-                Self::set_registrations_this_interval( 0 );
-            }
+            // --- 6. Drain all counters for this network for this interval.
+            Self::set_last_adjustment_block( current_block );
+            Self::set_registrations_this_interval( 0 );
+        }
 
-            // --- 7. Drain block registrations for each network. Needed for registration rate limits.
-            Self::set_registrations_this_block( 0 );
+        // --- 7. Drain block registrations for each network. Needed for registration rate limits.
+        Self::set_registrations_this_block( 0 );
         }
     }
 

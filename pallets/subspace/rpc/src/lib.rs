@@ -66,13 +66,8 @@ where
 	{ 
 
 
-
-
-
-
 	fn get_neurons(
 		&self,
-		: u16,
 		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
@@ -104,27 +99,14 @@ where
 		})
 	}
 	
-	fn get_subnet_info(&self,  at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
-		let api = self.client.runtime_api();
-		let at = at.unwrap_or_else(|| self.client.info().best_hash);
-
-		api.get_subnet_info(at).map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
-				Error::RuntimeError.into(),
-				"Unable to get subnet info.",
-				Some(e.to_string()),
-			)).into()
-		})
-	}
-
-	fn get_subnets_info(
+	fn get_net_info(
 		&self,
 		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnets_info(at).map_err(|e| {
+		api.get_net_info(at).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 			Error::RuntimeError.into(),
 			"Unable to get subnets info.",

@@ -12,16 +12,10 @@ impl<T: Config> Pallet<T> {
     // returns the emissions for uids/keys in a given `netuid`.
     //
     // # Args:
-    // 	* 'netuid': ( u16 ):
-    //         - The network to distribute the emission onto.
-    // 		
-    // 	* 'rao_emission': ( u64 ):
+    // 	* 'token_emission': ( u64 ):
     //         - The total emission for the epoch.
     //
-    // 	* 'debug' ( bool ):
-    // 		- Print debugging outputs.
-    //    
-    pub fn epoch( rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
+    pub fn epoch( token_emission: u64 ) -> Vec<(T::AccountId, u64)> {
         // Get subnetwork size.
         let n: u16 = Self::get_n();
         log::trace!( "n: {:?}", n );
@@ -58,7 +52,7 @@ impl<T: Config> Pallet<T> {
         // ===========
 
         let mut keys: Vec<(u16, T::AccountId)> = vec![];
-        for ( uid_i, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix() {
+        for ( uid_i, key ) in < Keys<T> as IterableStorageMap<u16, T::AccountId >>::iter_prefix() {
             keys.push( (uid_i, key) ); 
         }
         log::trace!( "keys: {:?}", &keys );
@@ -108,10 +102,10 @@ impl<T: Config> Pallet<T> {
         // =============================
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i.
-        let mut ranks: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
+        let mut incentive: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
         // log::trace!( "R (after): {:?}", &ranks );
 
-        inplace_normalize( &mut ranks );  // range: I32F32(0, 1)
+        inplace_normalize( &mut incentive );  // range: I32F32(0, 1)
         let incentive: Vec<I32F32> = ranks.clone();
         log::trace!( "I (=R): {:?}", &incentive );
 
@@ -164,31 +158,27 @@ impl<T: Config> Pallet<T> {
             }
         }
         
-        // Compute rao based emission scores. range: I96F32(0, rao_emission)
-        let float_rao_emission: I96F32 = I96F32::from_num( rao_emission );
-        let emission: Vec<I96F32> = normalized_emission.iter().map( |e: &I32F32| I96F32::from_num( *e ) * float_rao_emission ).collect();
+        // Compute rao based emission scores. range: I96F32(0, token_emission)
+        let float_token_emission: I96F32 = I96F32::from_num( token_emission );
+        let emission: Vec<I96F32> = normalized_emission.iter().map( |e: &I32F32| I96F32::from_num( *e ) * float_token_emission ).collect();
         let emission: Vec<u64> = emission.iter().map( |e: &I96F32| e.to_num::<u64>() ).collect();
         log::trace!( "nE: {:?}", &normalized_emission );
         log::trace!( "E: {:?}", &emission );
 
         // Set pruning scores.
-        let pruning_scores: Vec<I32F32> = normalized_emission.clone();
         log::trace!( "P: {:?}", &pruning_scores );
 
         // ===================
         // == Value storage ==
         // ===================
         let cloned_emission: Vec<u64> = emission.clone();
-        let cloned_ranks: Vec<u16> = ranks.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_incentive: Vec<u16> = incentive.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_dividends: Vec<u16> = dividends.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_pruning_scores: Vec<u16> = pruning_scores.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
+
         Active::<T>::insert( active.clone() );
         Emission::<T>::insert( cloned_emission );
-        Rank::<T>::insert( cloned_ranks);
         Incentive::<T>::insert( cloned_incentive );
         Dividends::<T>::insert( cloned_dividends );
-        PruningScores::<T>::insert( cloned_pruning_scores );
 
 
         // Emission tuples ( keys, u64 emission)
@@ -224,7 +214,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_weights_sparse()-> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16 ,u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
             for (uid_j, weight_ij) in weights_i.iter() { 
                 weights [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *weight_ij ) ));
             }
@@ -235,7 +225,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_weights()-> Vec<Vec<I32F32>> { 
         let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
-        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16,u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
             for (uid_j, weight_ij) in weights_i.iter() { 
                 weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed(  *weight_ij );
             }
@@ -246,7 +236,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_bonds_sparse()-> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_n() as usize; 
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
                 bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
             }

@@ -21,9 +21,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
     // 		- The signature of the calling key.
     //
-    // 	* 'netuid' (u16):
-    // 		- The u16 network identifier.
-    //
 
     // 	* 'nonce' ( u64 ):
     // 		- Positive integer nonce used in POW.
@@ -150,7 +147,7 @@ impl<T: Config> Pallet<T> {
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
         if Self::get_n() == 0 { return 0 } // If there are no neurons in this network.
         for neuron_uid_i in 0..Self::get_n() {
-            let pruning_score:u16 = Self::get_pruning_score_for_uid( neuron_uid_i );
+            let pruning_score:u16 = Self::get_emission_for_uid( neuron_uid_i );
             let block_at_registration: u64 = Self::get_neuron_block_at_registration( neuron_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
             let immunity_period: u64 = Self::get_immunity_period() as u64;
@@ -224,9 +221,6 @@ impl<T: Config> Pallet<T> {
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
     // 		- The signature of the caller.
-    //
-    // 	* 'netuid' (u16):
-    // 		- The u16 network identifier.
     //
     // 	* 'ip' (u64):
     // 		- The endpoint ip information as a u128 encoded integer.
@@ -350,44 +344,7 @@ impl<T: Config> Pallet<T> {
         
     }
 
-    // ---- The implementation for the extrinsic serve_prometheus.
-    //
-    // # Args:
-    // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the caller.
-    //
-    // 	* 'netuid' (u16):
-    // 		- The u16 network identifier.
-    //
-    // 	* 'version' (u64):
-    // 		- The commune version identifier.
-    //
-    // 	* 'ip' (u64):
-    // 		- The prometheus ip information as a u128 encoded integer.
-    //
-    // 	* 'port' (u16):
-    // 		- The prometheus port information as a u16 encoded integer.
-    // 
-    // 	* 'ip_type' (u8):
-    // 		- The prometheus ip version as a u8, 4 or 6.
-    //
 
-    // # Raises:
-    // 	* 'NetworkDoesNotExist':
-    // 		- Attempting to set weights on a non-existent network.
-    //
-    // 	* 'NotRegistered':
-    // 		- Attempting to set weights from a non registered account.
-    //
-    // 	* 'InvalidIpType':
-    // 		- The ip type is not 4 or 6.
-    //
-    // 	* 'InvalidIpAddress':
-    // 		- The numerically encoded ip address does not resolve to a proper ip.
-    //
-    // 	* 'ServingRateLimitExceeded':
-    // 		- Attempting to set prometheus information withing the rate limit min.
-    //
 
     /********************************
      --==[[  Helper functions   ]]==--

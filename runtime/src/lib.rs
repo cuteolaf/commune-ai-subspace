@@ -327,8 +327,8 @@ parameter_types! {
     pub const SubspaceInitialActivityCutoff: u16 = 5000;
     pub const SubspaceInitialMaxRegistrationsPerBlock: u16 = 50;
     pub const SubspaceInitialPruningScore : u16 = u16::MAX;
-    pub const SubspaceInitialServingRateLimit: u64 = 1000; 
-	pub const SubspaceInitialTxRateLimit: u64 = 1000;
+    pub const SubspaceInitialServingRateLimit: u64 = 1; 
+	pub const SubspaceInitialTxRateLimit: u64 = 1;
 }
 
 impl pallet_subspace::Config for Runtime {

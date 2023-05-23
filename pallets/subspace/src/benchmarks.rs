@@ -25,7 +25,6 @@ benchmarks! {
 
     // Lets create a single network.
     let n: u16 = 4096;
-    let netuid: u16 = 11; //11 is the benchmark network.
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= "DefaultModule".as_bytes().to_vec();
@@ -52,7 +51,6 @@ benchmarks! {
 
     // Lets create a single network.
     let n: u16 = 4096;
-    let netuid: u16 = 11; //11 is the benchmark network.
     let tempo: u16 = 1;
         let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
@@ -82,15 +80,12 @@ benchmarks! {
 
     // Lets create a single network.
     let n: u16 = 10;
-    let netuid: u16 = 1; //11 is the benchmark network.
     let tempo: u16 = 1;
         let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
-    let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();
-
-    assert_ok!(Subspace::<T>::do_add_network( RawOrigin::Root.into().try_into().unwrap(), name.into(), context.into(), tempo.into()));
+    let start_nonce: u64 = (39420842u64 + 100u64 as u64).into();
     
     let mut seed : u32 = 1;
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
@@ -103,7 +98,6 @@ benchmarks! {
     // This is a whitelisted caller who can make transaction without weights.
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
-    let netuid: u16 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
@@ -170,7 +164,6 @@ benchmarks! {
   benchmark_remove_stake{
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
-    let netuid: u16 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
@@ -199,7 +192,6 @@ benchmarks! {
   benchmark_serve_neuron{
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
-    let netuid: u16 = 1;
     let version: u16 =  2;
     let ip: u128 = 1676056785;
     let port: u16 = 128;
@@ -212,23 +204,7 @@ benchmarks! {
 
   }: serve_neuron(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
-  benchmark_serve_prometheus {
-    let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
-    let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
-    let netuid: u16 = 1;
-    let version: u16 = 2;
-    let ip: u128 = 1676056785;
-    let port: u16 = 128;
-    let ip_type: u8 = 4;
-    
-
-    Subspace::<T>::set_serving_rate_limit( 0);
-
-  }: serve_prometheus(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type)
-
-
   benchmark_sudo_add_network {
-    let netuid: u16 = 1;
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
@@ -236,7 +212,6 @@ benchmarks! {
   }: sudo_add_network(RawOrigin::<AccountIdOf<T>>::Root, name, tempo,)
 
   benchmark_sudo_remove_network {
-    let netuid: u16 = 1;
     let tempo: u16 = 0;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
@@ -284,7 +259,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
   }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, weights_set_rate_limit)
 
@@ -298,7 +272,6 @@ benchmarks! {
     let adjustment_interval: u16 = 12;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
   }: sudo_set_adjustment_interval(RawOrigin::<AccountIdOf<T>>::Root, adjustment_interval)
 
@@ -314,16 +287,6 @@ benchmarks! {
 
   }: sudo_set_target_registrations_per_interval(RawOrigin::<AccountIdOf<T>>::Root, target_registrations_per_interval)
 
-  benchmark_sudo_set_activity_cutoff {
-    let n: u16 = 4096;
-    let tempo: u16 = 1;
-    let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
-    let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
-    let activity_cutoff: u16 = 300;
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
-  }: sudo_set_activity_cutoff(RawOrigin::<AccountIdOf<T>>::Root, activity_cutoff)
-
 
   benchmark_sudo_set_max_allowed_uids {
     let n : u32 = 4096;
@@ -333,7 +296,6 @@ benchmarks! {
     let max_allowed_uids: u16 = 4096;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
   }: sudo_set_max_allowed_uids(RawOrigin::<AccountIdOf<T>>::Root, max_allowed_uids)
 
   benchmark_sudo_set_min_allowed_weights {
@@ -344,7 +306,6 @@ benchmarks! {
     let min_allowed_weights: u16 = 10;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
   }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, min_allowed_weights)
 
 
@@ -358,7 +319,6 @@ benchmarks! {
     let immunity_period: u16 = 100;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
   }: sudo_set_immunity_period(RawOrigin::<AccountIdOf<T>>::Root, immunity_period)
 
   benchmark_sudo_set_max_weight_limit {
@@ -369,7 +329,6 @@ benchmarks! {
     let max_weight_limit: u16 = 100;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
   }: sudo_set_max_weight_limit(RawOrigin::<AccountIdOf<T>>::Root, max_weight_limit)
 
@@ -382,7 +341,6 @@ benchmarks! {
     let max_registrations_per_block: u16 = 100;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
   }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, max_registrations_per_block)
 
 

@@ -56,15 +56,14 @@ mod block_step;
 
 mod epoch;
 mod math;
-mod networks;
+mod network;
+mod neuron;
 mod registration;
 mod staking;
-mod utils;
 mod uids;
 mod weights;
 
 pub mod neuron_info;
-pub mod subnet_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -171,13 +170,8 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
-	pub fn DefaultModality<T:Config>() -> u16 { 0 }
-	#[pallet::type_value] 
 	pub fn DefaultKeys<T:Config>() -> Vec<u16> { vec![ ] }
 	#[pallet::type_value]
-	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
-	#[pallet::type_value]
-	pub fn DefaultIsNetworkMember<T: Config>() ->  bool { false }
 
 
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
@@ -188,8 +182,6 @@ pub mod pallet {
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP () -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( key ) --> bool
-	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	// ==============================
 	// ==== Subnetwork Features =====
@@ -285,30 +277,28 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 	#[pallet::storage]
-	pub type NeuronNamespace<T: Config> = StorageDoubleMap<_, Twox64Concat, u16, Twox64Concat, Vec<u8>, T::AccountId, ValueQuery, DefaultKey<T>>;
+	pub type NeuronNamespace<T: Config> = StorageMap<_,  Twox64Concat, Vec<u8>, T::AccountId, ValueQuery, DefaultKey<T>>;
 		
 	#[pallet::storage] // --- MAP () --> uid, we use to record uids to prune at next epoch.
-    pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+    pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageValue<_, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP () --> registrations_this_interval
-	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP () --> pow_registrations_this_interval
-	pub type POWRegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+	pub type RegistrationsThisInterval<T:Config> =   StorageValue<_, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP () --> max_allowed_uids
-	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
+	pub type MaxAllowedUids<T> =  StorageValue<_, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
 	#[pallet::storage] // --- MAP () --> immunity_period
-	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
+	pub type ImmunityPeriod<T> =  StorageValue<_, u16, ValueQuery, DefaultImmunityPeriod<T> >;
 	#[pallet::storage] // --- MAP () --> activity_cutoff
-	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
+	pub type ActivityCutoff<T> =  StorageValue<_, u16, ValueQuery, DefaultActivityCutoff<T> >;
 	#[pallet::storage] // --- MAP () --> max_weight_limit
-	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
+	pub type MaxWeightsLimit<T> = StorageValue<_, u16, ValueQuery,DefaultMaxWeightsLimit<T> >;
 	#[pallet::storage] // --- MAP () --> min_allowed_weights
-	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+	pub type MinAllowedWeights<T> = StorageValue<_, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
 	#[pallet::storage] // --- MAP () --> adjustment_interval
-	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
+	pub type AdjustmentInterval<T> =  StorageValue<_, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] // --- MAP () --> weights_set_rate_limit
-	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
+	pub type WeightsSetRateLimit<T> = StorageValue<_, u16, ValueQuery, DefaultWeightsSetRateLimit<T> >;
 	#[pallet::storage] // --- MAP () --> target_registrations_this_interval
-	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
+	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u16 , ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 	#[pallet::storage] // --- DMAP ( uid ) --> block_at_registration
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
@@ -338,8 +328,6 @@ pub mod pallet {
 
 	#[pallet::storage] // --- DMAP () --> active
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
-	#[pallet::storage] // --- DMAP () --> rank
-	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> incentive
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> dividends
@@ -350,7 +338,6 @@ pub mod pallet {
 	pub(super) type LastUpdate<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> pruning_scores
 	
-	pub(super) type PruningScores<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T> >;
 
 	#[pallet::storage] // --- DMAP ( uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
@@ -488,13 +475,11 @@ pub mod pallet {
 					Incentive::<T>::mutate(|v| v.push(0));
 					Dividends::<T>::mutate(|v| v.push(0));
 					LastUpdate::<T>::mutate(|v| v.push(0));
-					PruningScores::<T>::mutate(|v| v.push(0));
 			
 					// Insert account information.
 					Keys::<T>::insert(uid, key.clone()); // Make key - uid association.
 					Uids::<T>::insert(key.clone(), uid); // Make uid - key association.
 					BlockAtRegistration::<T>::insert(uid, 0); // Fill block at registration.
-					IsNetworkMember::<T>::insert(key.clone(), true); // Fill network is member.
 	
 					// Fill stake information.
 	
@@ -1092,10 +1077,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                 let transaction_fee = 0;
                 Ok((CallType::Register, transaction_fee, who.clone()))
             }
-			Some(Call::add_network{..}) => {
-                let transaction_fee = 0;
-                Ok((CallType::AddNetwork, transaction_fee, who.clone()))
-            }
+
             Some(Call::serve_neuron{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))

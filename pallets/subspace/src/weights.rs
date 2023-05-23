@@ -64,9 +64,6 @@ impl<T: Config> Pallet<T> {
 
         // --- 2. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
-
-        // --- 3. Check to see if this is a valid network.
-        ensure!( Self::if_subnet_exist(), Error::<T>::NetworkDoesNotExist );
         
         // --- 4. Check to see if the number of uids is within the max allowed uids for this network.
         ensure!( Self::check_len_uids_within_allowed( &uids ), Error::<T>::TooManyUids);
