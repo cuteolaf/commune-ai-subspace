@@ -56,12 +56,12 @@ mod benchmarks;
 mod epoch;
 mod math;
 mod network;
-mod neuron;
+mod module;
 mod registration;
 mod staking;
 mod weights;
 
-pub mod neuron_info;
+pub mod module_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -86,7 +86,7 @@ pub mod pallet {
 		// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		// --- Currency type that will be used to place deposits on neurons
+		// --- Currency type that will be used to place deposits on modules
 		type Currency: Currency<Self::AccountId> + Send + Sync;
 
 		// =================================
@@ -114,7 +114,7 @@ pub mod pallet {
 		type InitialActivityCutoff: Get<u16>;
 		#[pallet::constant] // Initial max registrations per block.
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
-		#[pallet::constant] // Initial pruning score for each neuron
+		#[pallet::constant] // Initial pruning score for each module
 		type InitialPruningScore: Get<u16>;	
 		#[pallet::constant] // Initial serving rate limit.
 		type InitialServingRateLimit: Get<u64>;
@@ -220,7 +220,7 @@ pub mod pallet {
 		pub context: Vec<u8>, // --- Module context.
 		pub last_update: Compact<u64>, // --
 		// Subnet Info
-		pub stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this neuron/key (includes delegations)
+		pub stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
 		pub emission: Compact<u64>,
 		pub incentive: Compact<u16>,
 		pub dividends: Compact<u16>,
@@ -245,7 +245,7 @@ pub mod pallet {
 
 	#[pallet::storage] //  --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-	#[pallet::storage] // --- MAP ( key ) --> neuron_info
+	#[pallet::storage] // --- MAP ( key ) --> module_info
 	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
 	
 	// =======================================
@@ -350,7 +350,7 @@ pub mod pallet {
 		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the key staking account.
 		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the coldkey account.
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
-		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
+		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
 		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		BulkBalancesSet(u16, u16),
 		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
@@ -362,7 +362,7 @@ pub mod pallet {
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
-		ModuleServed( u16, T::AccountId ), // --- Event created when the neuron server information is added to the network.
+		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
@@ -372,12 +372,12 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		ModuleNameAlreadyExists, // --- Thrown when a neuron name already exists.
+		ModuleNameAlreadyExists, // --- Thrown when a module name already exists.
 		NetworkDoesNotExist, // --- Thrown when the network does not exist.
 		NetworkExist, // --- Thrown when the network already exist.
-		InvalidIpType, // ---- Thrown when the user tries to serve an neuron which is not of type	4 (IPv4) or 6 (IPv6).
+		InvalidIpType, // ---- Thrown when the user tries to serve an module which is not of type	4 (IPv4) or 6 (IPv6).
 		InvalidIpAddress, // --- Thrown when an invalid IP address is passed to the serve function.
-		NotRegistered, // ---- Thrown when the caller requests setting or removing data from a neuron which does not exist in the active set.
+		NotRegistered, // ---- Thrown when the caller requests setting or removing data from a module which does not exist in the active set.
 		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a coldkey which is not associated with the key account. 
 		NotEnoughStaketoWithdraw, // ---- Thrown when the caller requests removing more stake then there exists in the staking account. See: fn remove_stake.
 		NotEnoughBalanceToStake, //  ---- Thrown when the caller requests adding more stake than there exists in the cold key account. See: fn add_stake
@@ -387,7 +387,7 @@ pub mod pallet {
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
 		NotSettingEnoughWeights, // ---- Thrown when the dispatch attempts to set weights on chain with fewer elements than are allowed.
 		TooManyRegistrationsThisBlock, // ---- Thrown when registrations this block exceeds allowed number.
-		AlreadyRegistered, // ---- Thrown when the caller requests registering a neuron which already exists in the active set.
+		AlreadyRegistered, // ---- Thrown when the caller requests registering a module which already exists in the active set.
 		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxAllowedUids
 		CouldNotConvertToBalance, // ---- Thrown when the dispatch attempts to convert between a u64 and T::balance but the call fails.
 		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a key to the total stake which already added
@@ -398,7 +398,7 @@ pub mod pallet {
 		EmissionValuesDoesNotMatchNetworks, // --- Thrown when number or recieved emission rates does not match number of networks
 		InvalidEmissionValues, // --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_tempo/2 blocks.
-		ServingRateLimitExceeded, // --- Thrown when an neuron or prometheus serving exceeds the rate limit for a registered neuron.
+		ServingRateLimitExceeded, // --- Thrown when an module or prometheus serving exceeds the rate limit for a registered module.
 		BalanceSetError, // --- Thrown when an error occurs setting a balance
 		MaxAllowedUidsExceeded, // --- Thrown when number of accounts going to be registered exceed MaxAllowedUids for the network.
 		TooManyUids, // ---- Thrown when the caller attempts to set weights with more uids than allowed.
@@ -586,7 +586,7 @@ pub mod pallet {
 		// --- Adds stake to a key. The call is made from the
 		// coldkey account linked in the key.
 		// Only the associated coldkey is allowed to make staking and
-		// unstaking requests. This protects the neuron against
+		// unstaking requests. This protects the module against
 		// attacks on its key running in production code.
 		//
 		// # Args:
@@ -628,7 +628,7 @@ pub mod pallet {
 		}
 
 		// ---- Remove stake from the staking account. The call must be made
-		// from the coldkey account attached to the neuron metadata. Only this key
+		// from the coldkey account attached to the module metadata. Only this key
 		// has permission to make staking and unstaking requests.
 		//
 		// # Args:
@@ -669,7 +669,7 @@ pub mod pallet {
 			Self::do_remove_stake(origin, amount_unstaked)
 		}
 
-		// ---- Serves or updates neuron /promethteus information for the neuron associated with the caller. If the caller is
+		// ---- Serves or updates module /promethteus information for the module associated with the caller. If the caller is
 		// already registered the metadata is updated. If the caller is not registered this call throws NotRegistered.
 		//
 		// # Args:
@@ -688,7 +688,7 @@ pub mod pallet {
 		//
 		// # Event:
 		// 	* ModuleServed;
-		// 		- On successfully serving the neuron info.
+		// 		- On successfully serving the module info.
 		//
 		// # Raises:
 		// 	* 'NetworkDoesNotExist':
@@ -709,33 +709,33 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(19_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn update_neuron(
+		pub fn update_module(
 			origin:OriginFor<T>, 
 			ip: u128, 
 			port: u16,
 			name : Vec<u8>,
 			context: Vec<u8>
 		) -> DispatchResult {
-			Self::do_update_neuron( origin, ip, port, name, context ) 
+			Self::do_update_module( origin, ip, port, name, context ) 
 		}
 
 
 		#[pallet::weight((Weight::from_ref_time(19_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn update_neuron(
+		pub fn update_module(
 			origin:OriginFor<T>, 
 			ip: u128, 
 			port: u16,
 			name : Vec<u8>,
 			context: Vec<u8>
 		) -> DispatchResult {
-			Self::do_update_neuron( origin, ip, port, name, context ) 
+			Self::do_update_module( origin, ip, port, name, context ) 
 		}
 
 
 
-		// ---- Registers a new neuron to the subnetwork. 
+		// ---- Registers a new module to the subnetwork. 
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -756,7 +756,7 @@ pub mod pallet {
 		//
 		// # Event:
 		// 	* ModuleRegistered;
-		// 		- On successfully registereing a uid to a neuron slot on a subnetwork.
+		// 		- On successfully registereing a uid to a module slot on a subnetwork.
 		//
 		// # Raises:
 		// 	* 'NetworkDoesNotExist':
@@ -1072,11 +1072,11 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                 Ok((CallType::Register, transaction_fee, who.clone()))
             }
 
-            Some(Call::update_neuron{..}) => {
+            Some(Call::update_module{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))
             }
-            Some(Call::update_neuron{..}) => {
+            Some(Call::update_module{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))
             }

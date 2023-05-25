@@ -36,7 +36,7 @@ benchmarks! {
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
         let key: T::AccountId = account("Alice", 0, seed);
-        Subspace::<T>::append_neuron( &key, block_number );
+        Subspace::<T>::append_module( &key, block_number );
         seed = seed + 1;
     }
 
@@ -64,7 +64,7 @@ benchmarks! {
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
         let key: T::AccountId = account("Alice", 0, SEED);
-        Subspace::<T>::append_neuron( &key, block_number );
+        Subspace::<T>::append_module( &key, block_number );
         SEED = SEED + 1;
         emission.push( ( key, 1 ) );
     }
@@ -145,7 +145,7 @@ benchmarks! {
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  context.into(), tempo, n ));
     Subspace::<T>::set_max_allowed_uids( 4096 ); 
-    assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
+    assert_eq!(Subspace::<T>::get_max_allowed_uids(), 4096);
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
     let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();
@@ -189,7 +189,7 @@ benchmarks! {
 
   }: remove_stake(RawOrigin::Signed( key.clone() ), key.clone(), amount_unstaked)
 
-  benchmark_serve_neuron{
+  benchmark_serve_module{
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let version: u16 =  2;
@@ -202,7 +202,7 @@ benchmarks! {
 
     Subspace::<T>::set_serving_rate_limit( 0);
 
-  }: update_neuron(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
+  }: update_module(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
   benchmark_sudo_add_network {
     let tempo: u16 = 1;
@@ -283,7 +283,6 @@ benchmarks! {
     let target_registrations_per_interval: u16 = 300;
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
-    let netuid : u16 = Subspace::<T>::get_netuid_from_name(name.clone()).unwrap();
 
   }: sudo_set_target_registrations_per_interval(RawOrigin::<AccountIdOf<T>>::Root, target_registrations_per_interval)
 

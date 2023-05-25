@@ -30,7 +30,7 @@ impl<T: Config> Pallet<T> {
     //
     // # Event:
     // 	* ModuleRegistered;
-    // 		- On successfully registereing a uid to a neuron slot on a subnetwork.
+    // 		- On successfully registereing a uid to a module slot on a subnetwork.
     //
     // # Raises:
     // 	* 'NetworkDoesNotExist':
@@ -68,7 +68,7 @@ impl<T: Config> Pallet<T> {
             Self::create_account_if_non_existent( &key);         
         
 
-            // Possibly there is no neuron slots at all.
+            // Possibly there is no module slots at all.
             ensure!( Self::get_max_allowed_uids() != 0, Error::<T>::NetworkDoesNotExist );
             
             if n < Self::get_max_allowed_uids() {
@@ -78,16 +78,16 @@ impl<T: Config> Pallet<T> {
                 uid = n;
 
                 // --- 12.1.2 Expand subnetwork with new account.
-                Self::append_neuron(  &key );
-                log::info!("add new neuron account");
+                Self::append_module(  &key );
+                log::info!("add new module account");
             } else {
                 // --- 12.1.1 Replacement required.
-                // We take the neuron with the lowest pruning score here.
-                uid = Self::get_neuron_to_prune();
+                // We take the module with the lowest pruning score here.
+                uid = Self::get_module_to_prune();
 
-                // --- 12.1.1 Replace the neuron account with the new info.
-                Self::replace_neuron( uid, &key );
-                log::info!("prune neuron");
+                // --- 12.1.1 Replace the module account with the new info.
+                Self::replace_module( uid, &key );
+                log::info!("prune module");
             }
 
             // --- Record the registration and increment block and interval counters.
@@ -99,7 +99,7 @@ impl<T: Config> Pallet<T> {
     
         }
 
-        Self::do_update_neuron(origin.clone(),  ip, port, name, context );
+        Self::do_update_module(origin.clone(),  ip, port, name, context );
 
         // --- 16. Ok and done.
         Ok(())
@@ -123,7 +123,7 @@ impl<T: Config> Pallet<T> {
         // Work must have been done within 3 blocks (stops long range attacks).
         let current_block_number: u64 = Self::get_current_block_as_u64();
         // --- 10. If the network account does not exist we will create it here.
-        Self::replace_neuron(  &key );
+        Self::replace_module(  &key );
 
         Ok(())
     }
@@ -136,43 +136,43 @@ impl<T: Config> Pallet<T> {
     }
 
     // Determine which peer to prune from the network by finding the element with the lowest pruning score out of
-    // immunity period. If all neurons are in immunity period, return node with lowest prunning score.
+    // immunity period. If all modules are in immunity period, return node with lowest prunning score.
     // This function will always return an element to prune.
-    pub fn get_neuron_to_prune() -> u16 {
+    pub fn get_module_to_prune() -> u16 {
         let mut min_score : u16 = u16::MAX;
         let mut min_score_in_immunity_period = u16::MAX;
         let mut uid_with_min_score = 0;
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
-        if Self::get_n() == 0 { return 0 } // If there are no neurons in this network.
-        for neuron_uid_i in 0..Self::get_n() {
+        if Self::get_n() == 0 { return 0 } // If there are no modules in this network.
+        for module_uid_i in 0..Self::get_n() {
             // we set the pruning score to the lowest emmisions
-            let pruning_score:u16 = Self::get_emission_for_uid( neuron_uid_i );
-            let block_at_registration: u64 = Self::get_neuron_block_at_registration( neuron_uid_i );
+            let pruning_score:u16 = Self::get_emission_for_uid( module_uid_i );
+            let block_at_registration: u64 = Self::get_module_block_at_registration( module_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
             let immunity_period: u64 = Self::get_immunity_period() as u64;
             if min_score == pruning_score {
-                if current_block - block_at_registration <  immunity_period { //neuron is in immunity period
+                if current_block - block_at_registration <  immunity_period { //module is in immunity period
                     if min_score_in_immunity_period > pruning_score {
                         min_score_in_immunity_period = pruning_score; 
-                        uid_with_min_score_in_immunity_period = neuron_uid_i;
+                        uid_with_min_score_in_immunity_period = module_uid_i;
                     }
                 }
                 else {
                     min_score = pruning_score; 
-                    uid_with_min_score = neuron_uid_i;
+                    uid_with_min_score = module_uid_i;
                 }
             }
             // Find min pruning score.
             else if min_score > pruning_score { 
-                if current_block - block_at_registration <  immunity_period { //neuron is in immunity period
+                if current_block - block_at_registration <  immunity_period { //module is in immunity period
                     if min_score_in_immunity_period > pruning_score {
                          min_score_in_immunity_period = pruning_score; 
-                        uid_with_min_score_in_immunity_period = neuron_uid_i;
+                        uid_with_min_score_in_immunity_period = module_uid_i;
                     }
                 }
                 else {
                     min_score = pruning_score; 
-                    uid_with_min_score = neuron_uid_i;
+                    uid_with_min_score = module_uid_i;
                 }
             }
         }
@@ -215,7 +215,7 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    // ---- The implementation for the extrinsic update_neuron which sets the ip endpoint information for a uid on a network.
+    // ---- The implementation for the extrinsic update_module which sets the ip endpoint information for a uid on a network.
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
@@ -228,7 +228,7 @@ impl<T: Config> Pallet<T> {
     // 		- The endpoint port information as a u16 encoded integer.
     //
     // 	* 'name' (Vec[u8]):
-    // 		- the name of the neuron.
+    // 		- the name of the module.
     // 
     // 	* 'context' (Vec[u8]):
     // 		- Any context that can be put as a string (json serializable objects count too)
@@ -236,7 +236,7 @@ impl<T: Config> Pallet<T> {
 
     // # Event:
     // 	* ModuleServed;
-    // 		- On successfully serving the neuron info.
+    // 		- On successfully serving the module info.
     //
     // # Raises:
     // 	* 'NetworkDoesNotExist':
@@ -251,7 +251,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'ServingRateLimitExceeded':
     // 		- Attempting to set prometheus information withing the rate limit min.
     //
-    pub fn do_update_neuron( 
+    pub fn do_update_module( 
         origin: T::RuntimeOrigin, 
         ip: u128, 
         port: u16, 
@@ -266,36 +266,36 @@ impl<T: Config> Pallet<T> {
 
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
 
-        // --- 4. Get the previous neuron information.
-        let mut prev_neuron = Self::get_neuron_info( &key );  
+        // --- 4. Get the previous module information.
+        let mut prev_module = Self::get_module_info( &key );  
 
             
         if (name.len() > 0) {
             ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
-            prev_neuron.name = name.clone();
+            prev_module.name = name.clone();
 
         }
 
         if (ip.len() > 0) {
             ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
-            prev_neuron.ip = ip;
+            prev_module.ip = ip;
         }
 
-        prev_neuron.port = port;
+        prev_module.port = port;
 
         if (name.len() > 0) {
-            prev_neuron.context = context.clone();
+            prev_module.context = context.clone();
         }
         
         let current_block: u64 = Self::get_current_block_as_u64(); 
-        prev_neuron.serve_block = current_block;
+        prev_module.serve_block = current_block;
 
-        Modules::<T>::insert( key.clone(), prev_neuron.clone() );
-        let prev_name  = prev_neuron.name.clone();
+        Modules::<T>::insert( key.clone(), prev_module.clone() );
+        let prev_name  = prev_module.name.clone();
         ModuleNamespace::<T>::remove(prev_name);
         ModuleNamespace::<T>::insert( name.clone(), uid );
 
-        // --- 7. We deposit neuron served event.
+        // --- 7. We deposit module served event.
         log::info!("ModuleServed( key:{:?} ) ", key.clone() );
         Self::deposit_event(Event::ModuleServed( key.clone() ));
 
@@ -304,7 +304,7 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    pub fn create_neuron( 
+    pub fn create_module( 
         origin: T::RuntimeOrigin, 
         ip: u128, 
         port: u16, 
@@ -318,24 +318,24 @@ impl<T: Config> Pallet<T> {
         ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
                 
-        let mut neuron = Self::get_neuron_info( &key );  
+        let mut module = Self::get_module_info( &key );  
 
-        neuron.name = name.clone();
-        neuron.ip = ip;
-        neuron.port = port;
-        neuron.context = context.clone();
+        module.name = name.clone();
+        module.ip = ip;
+        module.port = port;
+        module.context = context.clone();
 
         // set the serve and register block as the same
         let current_block: u64 = Self::get_current_block_as_u64(); 
-        neuron.serve_block = current_block;
-        neuron.register_block = current_block;
+        module.serve_block = current_block;
+        module.register_block = current_block;
 
 
-        Modules::<T>::insert( key.clone(), neuron.clone() );
+        Modules::<T>::insert( key.clone(), module.clone() );
         ModuleNamespace::<T>::insert( name.clone(), uid );
 
 
-        // --- 7. We deposit neuron served event.
+        // --- 7. We deposit module served event.
         log::info!("ModuleServed( key:{:?} ) ", key.clone() );
         Self::deposit_event(Event::ModuleServed( key.clone() ));
 
@@ -356,21 +356,21 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn neuron_passes_rate_limit( prev_neuron_info: &ModuleInfo, current_block: u64 ) -> bool {
+    pub fn module_passes_rate_limit( prev_module_info: &ModuleInfo, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
-        let last_serve = prev_neuron_info.block;
+        let last_serve = prev_module_info.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
     }
 
 
 
-    pub fn has_neuron_info( key: &T::AccountId ) -> bool {
+    pub fn has_module_info( key: &T::AccountId ) -> bool {
         return Modules::<T>::contains_key( key );
     }
 
 
-    pub fn get_neuron_info( key: &T::AccountId ) -> ModuleInfo {
-        if Self::has_neuron_info( key ) {
+    pub fn get_module_info( key: &T::AccountId ) -> ModuleInfo {
+        if Self::has_module_info( key ) {
             return Modules::<T>::get( key ).unwrap();
         } else{
             return ModuleInfo { 
@@ -380,7 +380,7 @@ impl<T: Config> Pallet<T> {
                 port: 0,
                 name: vec![],
                 context: vec![],
-                stake: vec![], // map of key to stake on this neuron/key (includes delegations)
+                stake: vec![], // map of key to stake on this module/key (includes delegations)
                 emission: 0,
                 incentive: 0,
                 dividends: 0,

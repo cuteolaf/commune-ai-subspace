@@ -9,31 +9,31 @@ use frame_support::pallet_prelude::DispatchError;
 
 
 impl<T: Config> Pallet<T> {
-	pub fn get_neurons(netuid: u16) -> Vec<ModuleInfo<T>> {
+	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
 
-        let mut neurons = Vec::new();
+        let mut modules = Vec::new();
         let n = Self::get_subnetwork_n(netuid);
         for uid in 0..n {
             let uid = uid;
 
-            let _neuron = Self::get_neuron(uid);
-            let neuron;
-            if _neuron.is_none() {
-                break; // No more neurons
+            let _module = Self::get_module(uid);
+            let module;
+            if _module.is_none() {
+                break; // No more modules
             } else {
                 // No error, key was registered
-                neuron = _neuron.expect("Module should exist");
+                module = _module.expect("Module should exist");
             }
 
-            neurons.push( neuron );
+            modules.push( module );
         }
-        return neurons;
+        return modules;
 	}
 
-    fn get_neuron( uid: u16) -> Option<ModuleInfo<T>> {
+    fn get_module( uid: u16) -> Option<ModuleInfo<T>> {
         
         let key = Self::get_key_for_uid(uid);
-        let neuron_info = Self::get_neuron_info( &key.clone() );    
+        let module_info = Self::get_module_info( &key.clone() );    
         let active = Self::get_active_for_uid( uid as u16 );
         let emission = Self::get_emission_for_uid(  uid as u16 );
         let incentive = Self::get_incentive_for_uid(  uid as u16 );
@@ -43,7 +43,7 @@ impl<T: Config> Pallet<T> {
         let name = Self::get_name_for_uid(  uid as u16 );
 
 
-        let neuron = ModuleNetworkInfo {
+        let module = ModuleNetworkInfo {
             name: name.clone(),
             key: key.clone(),
             uid: uid.into(),
@@ -58,14 +58,14 @@ impl<T: Config> Pallet<T> {
             context: context.clone(),
         };
         
-        return Some(neuron);
+        return Some(module);
     }
 
 
-    // Replace the neuron under this uid.
-    pub fn replace_neuron( uid_to_replace: u16, new_key: &T::AccountId ) {
+    // Replace the module under this uid.
+    pub fn replace_module( uid_to_replace: u16, new_key: &T::AccountId ) {
 
-        log::debug!("replace_neuron( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
+        log::debug!("replace_module( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
 
         // 1. Get the old key under this position.
         let old_key: T::AccountId = Keys::<T>::get( uid_to_replace );
@@ -83,10 +83,10 @@ impl<T: Config> Pallet<T> {
     }
     
 
-    // Replace the neuron under this uid.
-    pub fn remove_neuron( uid: u16 ) {
+    // Replace the module under this uid.
+    pub fn remove_module( uid: u16 ) {
 
-        log::debug!("replace_neuron( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
+        log::debug!("replace_module( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
 
         // 1. Get the old key under this position.
         let old_key: T::AccountId = Keys::<T>::get( uid );
@@ -99,12 +99,12 @@ impl<T: Config> Pallet<T> {
     }
 
     // Appends the uid to the network.
-    pub fn append_neuron(new_key: &T::AccountId ) {
+    pub fn append_module(new_key: &T::AccountId ) {
 
         // 1. Get the next uid. This is always equal to subnetwork_n.
         let next_uid: u16 = Self::get_n();
         let block_number = Self::get_current_block_as_u64();
-        log::debug!("append_neuron(next_uid: {:?} | new_key: {:?} ) ",new_key, next_uid );
+        log::debug!("append_module(next_uid: {:?} | new_key: {:?} ) ",new_key, next_uid );
 
         // 2. Get and increase the uid count.
 
@@ -140,8 +140,8 @@ impl<T: Config> Pallet<T> {
 
     // Returs the key under the network uid as a Result. Ok if the uid is taken.
     //
-    pub fn get_key_for_uid( neuron_uid: u16) ->  T::AccountId {
-        Keys::<T>::try_get(neuron_uid).unwrap() 
+    pub fn get_key_for_uid( module_uid: u16) ->  T::AccountId {
+        Keys::<T>::try_get(module_uid).unwrap() 
     }
     
 
@@ -153,9 +153,9 @@ impl<T: Config> Pallet<T> {
 
     // Returns the stake of the uid on network or 0 if it doesnt exist.
     //
-    pub fn get_stake_for_uid( neuron_uid: u16) -> u64 { 
-        if Self::is_uid_exist( neuron_uid) {
-            return Self::get_total_stake_for_key( &Self::get_key_for_uid( neuron_uid ) ) 
+    pub fn get_stake_for_uid( module_uid: u16) -> u64 { 
+        if Self::is_uid_exist( module_uid) {
+            return Self::get_total_stake_for_key( &Self::get_key_for_uid( module_uid ) ) 
         } else {
             return 0;
         }

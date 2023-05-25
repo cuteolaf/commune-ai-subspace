@@ -645,13 +645,13 @@ impl_runtime_apis! {
 	impl subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi<Block> for Runtime {
 
 
-		fn get_neurons(netuid: u16) -> Vec<u8> {
-			let result = SubspaceModule::get_neurons(netuid);
+		fn get_modules(netuid: u16) -> Vec<u8> {
+			let result = SubspaceModule::get_modules(netuid);
 			result.encode()
 		}
 
-		fn get_neuron(netuid: u16, uid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_neuron( uid);
+		fn get_module(netuid: u16, uid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_module( uid);
 			if _result.is_some() {
 				let result = _result.expect("Could not get ModuleInfo");
 				result.encode()

@@ -130,14 +130,14 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_context_for_uid(uid: u16) -> Vec<u8> { 
         let key = Self::get_key_for_uid(uid);
-        let neuron= Modules::<T>::get(key ).unwrap();
-        return neuron.context.clone();
+        let module= Modules::<T>::get(key ).unwrap();
+        return module.context.clone();
      }
 
     pub fn get_name_for_uid(uid: u16) -> Vec<u8> { 
         let key = Self::get_key_for_uid(uid);
-        let neuron= Modules::<T>::get(key ).unwrap();
-        return neuron.name.clone();
+        let module= Modules::<T>::get(key ).unwrap();
+        return module.name.clone();
     
     }
 
@@ -152,7 +152,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_registrations_this_block( ) -> u16 { RegistrationsThisBlock::<T>::get() }
     pub fn get_last_mechanism_step_block( ) -> u64 { LastMechansimStepBlock::<T>::get() }
     pub fn get_registrations_this_interval( ) -> u16 { RegistrationsThisInterval::<T>::get() } 
-    pub fn get_neuron_block_at_registration( neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get(neuron_uid )}
+    pub fn get_module_block_at_registration( module_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get(module_uid )}
 
     // ========================
 	// ==== Rate Limiting =====
