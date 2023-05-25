@@ -15,15 +15,15 @@ use std::sync::Arc;
 
 use sp_api::ProvideRuntimeApi;
 
-pub use subspace_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
+pub use subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi;
 pub use subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi;
 
 #[rpc(client, server)]
 pub trait SubspaceCustomApi<BlockHash> {
 
-	#[method(name = "neuronInfo_getNeurons")]
+	#[method(name = "neuronInfo_getModules")]
 	fn get_neurons(&self: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-	#[method(name = "neuronInfo_getNeuron")]
+	#[method(name = "neuronInfo_getModule")]
 	fn get_neuron(&self: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
 	#[method(name = "subnetInfo_getNetInfo")]
@@ -61,7 +61,7 @@ impl<C, Block> SubspaceCustomApiServer<<Block as BlockT>::Hash> for SubspaceCust
 where
 	Block: BlockT,
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,
-	C::Api: NeuronInfoRuntimeApi<Block>,
+	C::Api: ModuleInfoRuntimeApi<Block>,
 	C::Api: SubnetInfoRuntimeApi<Block>,
 	{ 
 

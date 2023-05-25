@@ -121,12 +121,6 @@ impl<T: Config> Pallet<T> {
             Active::<T>::put(updated_active_vec );
         }  
     }
-    pub fn set_pruning_score_for_uid(uid: u16, pruning_score: u16 ) {
-        log::info!("SubnetworkN::<T>::get() = {:?}", SubnetworkN::<T>::get() );
-        log::info!("uid = {:?}", uid );
-        assert!( uid < SubnetworkN::<T>::get() );
-        PruningScores::<T>::mutate(|v| v[uid as usize] = pruning_score );
-    }
 
     pub fn get_emission_for_uid(uid: u16) -> u64 {let vec =  Emission::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_active_for_uid(uid: u16) -> bool { let vec = Active::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
@@ -136,13 +130,13 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_context_for_uid(uid: u16) -> Vec<u8> { 
         let key = Self::get_key_for_uid(uid);
-        let neuron= Neurons::<T>::get(key ).unwrap();
+        let neuron= Modules::<T>::get(key ).unwrap();
         return neuron.context.clone();
      }
 
     pub fn get_name_for_uid(uid: u16) -> Vec<u8> { 
         let key = Self::get_key_for_uid(uid);
-        let neuron= Neurons::<T>::get(key ).unwrap();
+        let neuron= Modules::<T>::get(key ).unwrap();
         return neuron.name.clone();
     
     }

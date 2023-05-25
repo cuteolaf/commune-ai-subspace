@@ -11,7 +11,7 @@ impl<T: Config> Pallet<T> {
 
 
 
-    // Calculates reward  values,then updates rank, incentive, dividend, pruning_score, emission and bonds, and 
+    // Calculates reward  values,then updates  incentive, dividend, emission and bonds, and 
     // returns the emissions for uids/keys in a given `netuid`.
     //
     // # Args:
@@ -19,7 +19,7 @@ impl<T: Config> Pallet<T> {
     //         - The total emission for the epoch.
     //
     pub fn epoch( token_emission: u64 ) -> Vec<(T::AccountId, u64)> {
-        // Get subnetwork size.
+        // Get network size.
         let n: u16 = Self::get_n();
         log::trace!( "n: {:?}", n );
 
@@ -47,7 +47,7 @@ impl<T: Config> Pallet<T> {
         let active: Vec<bool> = inactive.iter().map(|&b| !b).collect();
 
         // Block at registration vector (block when each neuron was most recently registered).
-        let block_at_registration: Vec<u64> = Self::get_block_at_registration();
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration(); // [n]
         log::trace!( "Block at registration: {:?}", &block_at_registration );
 
         // ===========
@@ -277,16 +277,14 @@ impl<T: Config> Pallet<T> {
 
  
 
-    pub fn has_loaded_emission_tuples( netuid: u16 ) -> bool { LoadedEmission::<T>::contains_key() }
-    pub fn get_loaded_emission_tuples( netuid: u16 ) -> Vec<(T::AccountId, u64)> { LoadedEmission::<T>::get().unwrap() }
+    pub fn has_loaded_emission_tuples() -> bool {  LoadedEmission::<T>::get().unwrap().len() > 0 }
+    pub fn get_loaded_emission_tuples() -> Vec<(T::AccountId, u64)> { LoadedEmission::<T>::get().unwrap() }
 
     // Reads from the loaded emission storage which contains lists of pending emission tuples ( key, amount )
     // and distributes small chunks of them at a time.
     //
-    pub fn drain_emission( block_number: u64 ) {
+    pub fn drain_emission( block_number: u64) {
         // --- 1. We iterate across each network.
-        let tempo = Tempo::<T>::get()
-        if !Self::has_loaded_emission_tuples() { continue } // There are no tuples to emit.
         let tuples_to_drain: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples();
         for (key, amount) in tuples_to_drain.iter() {                 
             Self::emit_inflation_through_account( &key, *amount );
@@ -312,7 +310,6 @@ impl<T: Config> Pallet<T> {
         if Self::blocks_until_next_epoch( tempo, block_number ) != 0 {
             // --- 3.1 No epoch, increase blocks since last step and continue,
             Self::set_blocks_since_last_step( Self::get_blocks_since_last_step() + 1 );
-            continue;
         } else {
             // --- 4 This network is at tempo and we are running its epoch.
             // First frain the queued emission.
@@ -324,7 +321,6 @@ impl<T: Config> Pallet<T> {
                 
             // --- 6. Check that the emission does not exceed the allowed total.
             let emission_sum: u128 = emission_tuples_this_block.iter().map( |(_account_id, e)| *e as u128 ).sum();
-            if emission_sum > emission_to_drain as u128 { continue } // Saftey check.
 
             // --- 7. Sink the emission tuples onto the already loaded.
             let mut concat_emission_tuples: Vec<(T::AccountId, u64)> = emission_tuples_this_block.clone();
@@ -333,7 +329,8 @@ impl<T: Config> Pallet<T> {
                 let mut current_emission_tuples: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples();
                 concat_emission_tuples.append( &mut current_emission_tuples );
             } 
-            LoadedEmission::<T>::insert( concat_emission_tuples );
+            
+            LoadedEmission::<T>::put( concat_emission_tuples );
 
             // --- 8 Set counters.
             Self::set_blocks_since_last_step( 0 );
@@ -347,37 +344,29 @@ impl<T: Config> Pallet<T> {
     //
     pub fn emit_inflation_through_account( key: &T::AccountId, emission: u64) {
         
-
         // --- 2. The key is a delegate. We first distribute a proportion of the emission to the key
         // directly as a function of its 'take'
         let total_stake: u64 = Self::get_total_stake_for_key( key );
- 
-        let remaining_emission: u64 = emission ;
-
         // 3. -- The remaining emission goes to the owners in proportion to the stake delegated.
         for ( owning_key_i, stake_i ) in < Stake<T> as IterableStorageMap<T::AccountId,  u64 >>::iter() {
             
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
-            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_stake, remaining_emission );
+            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_stake, emission );
             Self::increase_stake_on_account( &key , stake_proportion );
             log::debug!("owning_key_i: {:?}  emission: +{:?} ", owning_key_i, stake_proportion );
 
         }
 
-
     }
 
-
-    // Returns emission awarded to a key as a function of its proportion of the total stake.
-    //
     pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
+        //Returns emission awarded to a key as a function of its proportion of the total stake.
+        //
         if total_stake == 0 { return 0 };
         let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
         let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
         return proportional_emission.to_num::<u64>();
     }
-
-
 
     // Adjusts the network of every active network. Reseting state parameters.
     //

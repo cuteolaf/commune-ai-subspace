@@ -174,9 +174,7 @@ pub mod pallet {
 
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
 	pub type N<T:Config> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP () --> subnetwork_n (Number of UIDs in the network).
-	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
-	#[pallet::storage] // --- MAP () --> network_is_added
+	#[pallet::storage] //  --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP () -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
@@ -195,42 +193,40 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultTempo<T: Config>() -> u16 { T::InitialTempo::get() }
 
-	#[pallet::storage] // --- MAP () --> tempo
-	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
-	#[pallet::storage] // --- MAP () --> emission_values
-	pub type EmissionValues<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
-	#[pallet::storage] // --- MAP () --> pending_emission
-	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
-	#[pallet::storage] // --- MAP () --> blocks_since_last_step.
-	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
-	#[pallet::storage] // --- MAP () --> last_mechanism_step_block
-	pub type LastMechansimStepBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
+	#[pallet::storage] //  --> tempo
+	pub type Tempo<T> = StorageValue<_,  u16, ValueQuery, DefaultTempo<T> >;
+	#[pallet::storage] //  --> emission_values
+	pub type EmissionValue<T> = StorageValue<_,  u64, ValueQuery, DefaultEmissionValues<T>>;
+	#[pallet::storage] //  --> pending_emission
+	pub type PendingEmission<T> = StorageValue<_,  u64, ValueQuery, DefaultPendingEmission<T>>;
+	#[pallet::storage] //  --> blocks_since_last_step.
+	pub type BlocksSinceLastStep<T> = StorageValue<_, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
+	#[pallet::storage] //  --> last_mechanism_step_block
+	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
 
 	// =================================
-	// ==== Neuron Endpoints =====
+	// ==== Module Endpoints =====
 	// =================================
 	
-	// --- Struct for Neuron.
+	// --- Struct for Module.
 	
 	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-    pub struct NeuronInfo {
-		pub block: u64, // --- Neuron serving block.
-        pub ip: u128, // --- Neuron u128 encoded ip address of type v6 or v4.
-        pub port: u16, // --- Neuron u16 encoded port.
-        pub name: Vec<u8>, // --- Neuron ip type, 4 for ipv4 and 6 for ipv6.
-		pub context: Vec<u8>, // --- Neuron context.
+    pub struct ModuleInfo {
+		pub serve_block: u64, // --- Module serving block.
+		pub register_block: u64, // --- Module serving block.
+        pub ip: u128, // --- Module u128 encoded ip address of type v6 or v4.
+        pub port: u16, // --- Module u16 encoded port.
+        pub name: Vec<u8>, // --- Module ip type, 4 for ipv4 and 6 for ipv6.
+		pub context: Vec<u8>, // --- Module context.
+		pub last_update: Compact<u64>, // --
+		// Subnet Info
+		pub stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this neuron/key (includes delegations)
+		pub emission: Compact<u64>,
+		pub incentive: Compact<u16>,
+		pub dividends: Compact<u16>,
+		pub weights: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, weight)
+		pub bonds: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, bond)
 	}
-
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-	pub struct SubnetInfo<T: Config> {
-		pub port: u16, // --- Neuron u16 encoded port.
-		pub name: Vec<u8>, // --- Neuron ip type, 4 for ipv4 and 6 for ipv6.
-		pub context: Vec<u8>, // --- Neuron context.
-		pub keys: Vec<T::AccountId>, // --- Neuron context.
-		// pub key: T::AccountId, // --- Neuron context.
-	}
-
-
 
 	// Rate limiting
 	#[pallet::type_value]
@@ -247,10 +243,10 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultServingRateLimit<T: Config>() -> u64 { T::InitialServingRateLimit::get() }
 
-	#[pallet::storage] // --- MAP () --> serving_rate_limit
+	#[pallet::storage] //  --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
 	#[pallet::storage] // --- MAP ( key ) --> neuron_info
-	pub(super) type Neurons<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, NeuronInfo, OptionQuery>;
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
 	
 	// =======================================
 	// ==== Subnetwork Hyperparam storage ====
@@ -275,27 +271,27 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 	#[pallet::storage]
-	pub type NeuronNamespace<T: Config> = StorageMap<_,  Twox64Concat, Vec<u8>, T::AccountId, ValueQuery, DefaultKey<T>>;
+	pub type ModuleNamespace<T: Config> = StorageMap<_,  Twox64Concat, Vec<u8>, u16, ValueQuery>;
 		
-	#[pallet::storage] // --- MAP () --> uid, we use to record uids to prune at next epoch.
-    pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP () --> registrations_this_interval
+	#[pallet::storage] //  --> uid, we use to record uids to prune at next epoch.
+    pub type ModulesToPruneAtNextEpoch<T:Config> = StorageValue<_, u16, ValueQuery>;
+	#[pallet::storage] //  --> registrations_this_interval
 	pub type RegistrationsThisInterval<T:Config> =   StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP () --> max_allowed_uids
+	#[pallet::storage] //  --> max_allowed_uids
 	pub type MaxAllowedUids<T> =  StorageValue<_, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
-	#[pallet::storage] // --- MAP () --> immunity_period
+	#[pallet::storage] //  --> immunity_period
 	pub type ImmunityPeriod<T> =  StorageValue<_, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] // --- MAP () --> activity_cutoff
+	#[pallet::storage] //  --> activity_cutoff
 	pub type ActivityCutoff<T> =  StorageValue<_, u16, ValueQuery, DefaultActivityCutoff<T> >;
-	#[pallet::storage] // --- MAP () --> max_weight_limit
+	#[pallet::storage] //  --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageValue<_, u16, ValueQuery,DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] // --- MAP () --> min_allowed_weights
+	#[pallet::storage] //  --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageValue<_, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] // --- MAP () --> adjustment_interval
+	#[pallet::storage] //  --> adjustment_interval
 	pub type AdjustmentInterval<T> =  StorageValue<_, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
-	#[pallet::storage] // --- MAP () --> weights_set_rate_limit
+	#[pallet::storage] //  --> weights_set_rate_limit
 	pub type WeightsSetRateLimit<T> = StorageValue<_, u16, ValueQuery, DefaultWeightsSetRateLimit<T> >;
-	#[pallet::storage] // --- MAP () --> target_registrations_this_interval
+	#[pallet::storage] //  --> target_registrations_this_interval
 	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u16 , ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 	#[pallet::storage] // --- DMAP ( uid ) --> block_at_registration
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
@@ -354,8 +350,8 @@ pub mod pallet {
 		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the key staking account.
 		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the coldkey account.
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
-		NeuronRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
-		BulkNeuronsRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
+		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
+		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		BulkBalancesSet(u16, u16),
 		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
 		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
@@ -366,7 +362,7 @@ pub mod pallet {
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
-		NeuronServed( u16, T::AccountId ), // --- Event created when the neuron server information is added to the network.
+		ModuleServed( u16, T::AccountId ), // --- Event created when the neuron server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
@@ -376,7 +372,7 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		NeuronNameAlreadyExists, // --- Thrown when a neuron name already exists.
+		ModuleNameAlreadyExists, // --- Thrown when a neuron name already exists.
 		NetworkDoesNotExist, // --- Thrown when the network does not exist.
 		NetworkExist, // --- Thrown when the network already exist.
 		InvalidIpType, // ---- Thrown when the user tries to serve an neuron which is not of type	4 (IPv4) or 6 (IPv6).
@@ -691,7 +687,7 @@ pub mod pallet {
 		// 		- UDP:1 or TCP:0 
 		//
 		// # Event:
-		// 	* NeuronServed;
+		// 	* ModuleServed;
 		// 		- On successfully serving the neuron info.
 		//
 		// # Raises:
@@ -713,14 +709,14 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(19_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn serve_neuron(
+		pub fn update_neuron(
 			origin:OriginFor<T>, 
 			ip: u128, 
 			port: u16,
 			name : Vec<u8>,
 			context: Vec<u8>
 		) -> DispatchResult {
-			Self::do_serve_neuron( origin, ip, port, name, context ) 
+			Self::do_update_neuron( origin, ip, port, name, context ) 
 		}
 
 
@@ -759,7 +755,7 @@ pub mod pallet {
 		// 		- Associated coldkey account.
 		//
 		// # Event:
-		// 	* NeuronRegistered;
+		// 	* ModuleRegistered;
 		// 		- On successfully registereing a uid to a neuron slot on a subnetwork.
 		//
 		// # Raises:
@@ -1076,7 +1072,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                 Ok((CallType::Register, transaction_fee, who.clone()))
             }
 
-            Some(Call::serve_neuron{..}) => {
+            Some(Call::update_neuron{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))
             }

@@ -29,7 +29,7 @@ impl<T: Config> Pallet<T> {
     // 		- Key to be registered to the network.
     //
     // # Event:
-    // 	* NeuronRegistered;
+    // 	* ModuleRegistered;
     // 		- On successfully registereing a uid to a neuron slot on a subnetwork.
     //
     // # Raises:
@@ -61,7 +61,7 @@ impl<T: Config> Pallet<T> {
 
         let current_block_number: u64 = Self::get_current_block_as_u64();
         let mut uid: u16;
-        let current_subnetwork_n: u16 = Self::get_n();
+        let n: u16 = Self::get_n();
 
         if !already_registered {
             // If the network account does not exist we will create it here.
@@ -71,11 +71,11 @@ impl<T: Config> Pallet<T> {
             // Possibly there is no neuron slots at all.
             ensure!( Self::get_max_allowed_uids() != 0, Error::<T>::NetworkDoesNotExist );
             
-            if current_subnetwork_n < Self::get_max_allowed_uids() {
+            if n < Self::get_max_allowed_uids() {
 
                 // --- 12.1.1 No replacement required, the uid appends the subnetwork.
                 // We increment the subnetwork count here but not below.
-                uid = current_subnetwork_n;
+                uid = n;
 
                 // --- 12.1.2 Expand subnetwork with new account.
                 Self::append_neuron(  &key );
@@ -94,11 +94,10 @@ impl<T: Config> Pallet<T> {
             RegistrationsThisInterval::<T>::mutate( |val| *val += 1 );
             RegistrationsThisBlock::<T>::mutate(|val| *val += 1 );
             // ---Deposit successful event.
-            log::info!("NeuronRegistered(  uid:{:?} key:{:?}  ) ",  uid, key );
-            Self::deposit_event( Event::NeuronRegistered( uid, key.clone() ) );
+            log::info!("ModuleRegistered(  uid:{:?} key:{:?}  ) ",  uid, key );
+            Self::deposit_event( Event::ModuleRegistered( uid, key.clone() ) );
     
         }
-
 
         Self::do_update_neuron(origin.clone(),  ip, port, name, context );
 
@@ -107,7 +106,8 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    pub fn do_transfer_registration(  origin: T::RuntimeOrigin,  uid: u16, new_key: T::AccountId ) -> DispatchResult {
+
+    pub fn do_transfer_registration(origin: T::RuntimeOrigin, uid: u16, new_key: T::AccountId ) -> DispatchResult {
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
         let key = ensure_signed( origin.clone() )?;        
@@ -128,8 +128,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-
-
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
         let de_de_ref_hash: &[u8] = &de_ref_hash; // c: &[u8]
@@ -147,6 +145,7 @@ impl<T: Config> Pallet<T> {
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
         if Self::get_n() == 0 { return 0 } // If there are no neurons in this network.
         for neuron_uid_i in 0..Self::get_n() {
+            // we set the pruning score to the lowest emmisions
             let pruning_score:u16 = Self::get_emission_for_uid( neuron_uid_i );
             let block_at_registration: u64 = Self::get_neuron_block_at_registration( neuron_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
@@ -216,7 +215,7 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    // ---- The implementation for the extrinsic serve_neuron which sets the ip endpoint information for a uid on a network.
+    // ---- The implementation for the extrinsic update_neuron which sets the ip endpoint information for a uid on a network.
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
@@ -236,7 +235,7 @@ impl<T: Config> Pallet<T> {
     // 
 
     // # Event:
-    // 	* NeuronServed;
+    // 	* ModuleServed;
     // 		- On successfully serving the neuron info.
     //
     // # Raises:
@@ -252,46 +251,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'ServingRateLimitExceeded':
     // 		- Attempting to set prometheus information withing the rate limit min.
     //
-    pub fn do_serve_neuron( 
-        origin: T::RuntimeOrigin, 
-        ip: u128, 
-        port: u16, 
-        name: Vec<u8>,
-        context: Vec<u8>,
-    ) -> dispatch::DispatchResult {
-        // --- 1. We check the callers (key) signature.
-        let key = ensure_signed(origin)?;
-        // --- 2. Ensure the key is registered somewhere.
-        ensure!( Self::is_key_registered_on_any_network( &key ), Error::<T>::NotRegistered );  
-        
-        // --- 4. Get the previous neuron information.
-        let mut prev_neuron = Self::get_neuron_info( &key );  
-        let current_block: u64 = Self::get_current_block_as_u64(); 
-            
-        if prev_neuron.name.len() > 0 {
-            let old_name = prev_neuron.name.clone();
-            NeuronNamespace::<T>::remove( old_name.clone() );
-        } 
-        ensure!(!Self::name_exists( name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
-        NeuronNamespace::<T>::insert( name.clone(), key.clone() );
-
-        ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
-        prev_neuron.name = name.clone();
-        prev_neuron.ip = ip;
-        prev_neuron.port = port;
-        prev_neuron.context = context.clone();
-        prev_neuron.block = current_block;
-
-        Neurons::<T>::insert( key.clone(), prev_neuron.clone() );
-
-        // --- 7. We deposit neuron served event.
-        log::info!("NeuronServed( key:{:?} ) ", key.clone() );
-        Self::deposit_event(Event::NeuronServed( key.clone() ));
-
-        // --- 8. Return is successful dispatch. 
-        Ok(())
-    }
-
     pub fn do_update_neuron( 
         origin: T::RuntimeOrigin, 
         ip: u128, 
@@ -302,35 +261,83 @@ impl<T: Config> Pallet<T> {
         // --- 1. We check the callers (key) signature.
         let key = ensure_signed(origin)?;
         // --- 2. Ensure the key is registered somewhere.
-        ensure!( Self::is_key_registered_on_any_network( &key ), Error::<T>::NotRegistered );  
-        
-        // --- 4. Get the previous neuron information.
-        let mut prev_neuron = Self::get_neuron_info( &key );  
-        let current_block: u64 = Self::get_current_block_as_u64(); 
-        
-        ensure!( Self::neuron_passes_rate_limit(  &prev_neuron, current_block ), Error::<T>::ServingRateLimitExceeded );  
-    
-        if prev_neuron.name.len() > 0 {
-            let old_name = prev_neuron.name.clone();
-            NeuronNamespace::<T>::remove( old_name.clone() );
-        } 
-        ensure!(!Self::name_exists( name.clone()) , Error::<T>::NeuronNameAlreadyExists); 
-        NeuronNamespace::<T>::insert( name.clone(), key.clone() );
+        ensure!( Self::is_key_registered( &key ), Error::<T>::NotRegistered );  
+
 
         ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
 
-        // 
-        prev_neuron.name = name.clone();
-        prev_neuron.ip = ip;
-        prev_neuron.port = port;
-        prev_neuron.context = context.clone();
-        prev_neuron.block = current_block;
+        // --- 4. Get the previous neuron information.
+        let mut prev_neuron = Self::get_neuron_info( &key );  
 
-        Neurons::<T>::insert( key.clone(), prev_neuron.clone() );
+            
+        if (name.len() > 0) {
+            ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
+            prev_neuron.name = name.clone();
+
+        }
+
+        if (ip.len() > 0) {
+            ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
+            prev_neuron.ip = ip;
+        }
+
+        prev_neuron.port = port;
+
+        if (name.len() > 0) {
+            prev_neuron.context = context.clone();
+        }
+        
+        let current_block: u64 = Self::get_current_block_as_u64(); 
+        prev_neuron.serve_block = current_block;
+
+        Modules::<T>::insert( key.clone(), prev_neuron.clone() );
+        let prev_name  = prev_neuron.name.clone();
+        ModuleNamespace::<T>::remove(prev_name);
+        ModuleNamespace::<T>::insert( name.clone(), uid );
 
         // --- 7. We deposit neuron served event.
-        log::info!("NeuronServed( key:{:?} ) ", key.clone() );
-        Self::deposit_event(Event::NeuronServed(  key.clone() ));
+        log::info!("ModuleServed( key:{:?} ) ", key.clone() );
+        Self::deposit_event(Event::ModuleServed( key.clone() ));
+
+        // --- 8. Return is successful dispatch. 
+        Ok(())
+    }
+
+
+    pub fn create_neuron( 
+        origin: T::RuntimeOrigin, 
+        ip: u128, 
+        port: u16, 
+        name: Vec<u8>,
+        context: Vec<u8>,
+    ) -> dispatch::DispatchResult {
+        // --- 1. We check the callers (key) signature.
+        let key = ensure_signed(origin)?;
+        // --- 2. Ensure the key is registered somewhere.
+        ensure!( Self::is_key_registered( &key ), Error::<T>::NotRegistered );  
+        ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
+        ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
+                
+        let mut neuron = Self::get_neuron_info( &key );  
+
+        neuron.name = name.clone();
+        neuron.ip = ip;
+        neuron.port = port;
+        neuron.context = context.clone();
+
+        // set the serve and register block as the same
+        let current_block: u64 = Self::get_current_block_as_u64(); 
+        neuron.serve_block = current_block;
+        neuron.register_block = current_block;
+
+
+        Modules::<T>::insert( key.clone(), neuron.clone() );
+        ModuleNamespace::<T>::insert( name.clone(), uid );
+
+
+        // --- 7. We deposit neuron served event.
+        log::info!("ModuleServed( key:{:?} ) ", key.clone() );
+        Self::deposit_event(Event::ModuleServed( key.clone() ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -338,9 +345,8 @@ impl<T: Config> Pallet<T> {
 
 
 
-
     pub fn name_exists( name: Vec<u8> ) -> bool {
-        return NeuronNamespace::<T>::contains_key(name.clone());
+        return ModuleNamespace::<T>::contains_key(name.clone());
         
     }
 
@@ -350,7 +356,7 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn neuron_passes_rate_limit( prev_neuron_info: &NeuronInfo, current_block: u64 ) -> bool {
+    pub fn neuron_passes_rate_limit( prev_neuron_info: &ModuleInfo, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
         let last_serve = prev_neuron_info.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
@@ -359,20 +365,28 @@ impl<T: Config> Pallet<T> {
 
 
     pub fn has_neuron_info( key: &T::AccountId ) -> bool {
-        return Neurons::<T>::contains_key( key );
+        return Modules::<T>::contains_key( key );
     }
 
 
-    pub fn get_neuron_info( key: &T::AccountId ) -> NeuronInfo {
+    pub fn get_neuron_info( key: &T::AccountId ) -> ModuleInfo {
         if Self::has_neuron_info( key ) {
-            return Neurons::<T>::get( key ).unwrap();
+            return Modules::<T>::get( key ).unwrap();
         } else{
-            return NeuronInfo { 
-                block: 0,
+            return ModuleInfo { 
+                serve_block: 0,
+                register_block: 0,
                 ip: 0,
                 port: 0,
                 name: vec![],
                 context: vec![],
+                stake: vec![], // map of key to stake on this neuron/key (includes delegations)
+                emission: 0,
+                incentive: 0,
+                dividends: 0,
+                weights: vec![], // Vec of (uid, weight)
+                bonds: vec![], // Vec of (uid, bond)
+
             }
 
         }

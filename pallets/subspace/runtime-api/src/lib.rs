@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 // src/neuron_info.rs, src/subnet_info.rs, and src/delegate_info.rs
 sp_api::decl_runtime_apis! {
 
-	pub trait NeuronInfoRuntimeApi {
+	pub trait ModuleInfoRuntimeApi {
 		fn get_neurons() -> Vec<u8>;
 		fn get_neuron(uid: u16) -> Vec<u8>;
 	}

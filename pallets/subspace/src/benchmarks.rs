@@ -202,7 +202,7 @@ benchmarks! {
 
     Subspace::<T>::set_serving_rate_limit( 0);
 
-  }: serve_neuron(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
+  }: update_neuron(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
   benchmark_sudo_add_network {
     let tempo: u16 = 1;

@@ -39,23 +39,25 @@ impl<T: Config> Pallet<T> {
         origin: T::RuntimeOrigin, 
         stake_to_be_added: u64
     ) -> dispatch::DispatchResult {
+        
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId key information.
         let key = ensure_signed( origin )?;
+
+        // --- 2. Ensure we don't exceed tx rate limit
+		ensure!( !Self::exceeds_tx_rate_limit( Self::get_last_tx_block(&key), Self::get_current_block_as_u64() ), Error::<T>::TxRateLimitExceeded );
+
         log::info!("do_add_stake( origin:{:?} stake_to_be_added:{:?} )", key, stake_to_be_added );
 
-        // --- 2. We convert the stake u64 into a balancer.
+        // --- 3. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( stake_to_be_added );
         ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
  
-        // --- 3. Ensure the callers key has enough stake to perform the transaction.
+        // --- 4. Ensure the callers key has enough stake to perform the transaction.
         ensure!( Self::can_remove_balance_from_account( &key, stake_as_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
 
 
-        // --- 6. Ensure the remove operation from the key is a success.
+        // --- 4. Ensure the remove operation from the key is a success.
         ensure!( Self::remove_balance_from_account( &key, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
-
-		// --- 7. Ensure we don't exceed tx rate limit
-		ensure!( !Self::exceeds_tx_rate_limit( Self::get_last_tx_block(&key), Self::get_current_block_as_u64() ), Error::<T>::TxRateLimitExceeded );
 
         // --- 8. If we reach here, add the balance to the key.
         Self::increase_stake_on_account( &key, stake_to_be_added );
@@ -178,14 +180,11 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-
     // Returns true if the cold-hot staking account has enough balance to fufil the decrement.
     //
     pub fn has_enough_stake( key: &T::AccountId, decrement: u64 ) -> bool {
         return Self::get_stake(  key ) >= decrement;
     }
-
-
 
     // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
     // This function should be called rather than set_stake under account.
@@ -195,7 +194,6 @@ impl<T: Config> Pallet<T> {
         Stake::<T>::insert( key, Stake::<T>::get( key).saturating_add( increment ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_add( increment ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_add( increment ) );
-
     }
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
@@ -208,7 +206,6 @@ impl<T: Config> Pallet<T> {
     }
 
 	pub fn u64_to_balance( input: u64 ) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance> { input.try_into().ok() }
-
     pub fn add_balance_to_account(key: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) {
         T::Currency::deposit_creating(&key, amount); // Infallibe
     }
