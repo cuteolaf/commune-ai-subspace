@@ -1023,13 +1023,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                     ..Default::default()
                 })
             }
-            Some(Call::add_network{..}) => {
-                Ok(ValidTransaction {
-                    priority: Self::get_priority_vanilla(),
-                    ..Default::default()
-                })
-            }
-	
+
 			Some(Call::register{..}) => {
                 Ok(ValidTransaction {
                     priority: Self::get_priority_vanilla(),

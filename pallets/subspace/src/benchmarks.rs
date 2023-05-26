@@ -28,7 +28,6 @@ benchmarks! {
     let tempo: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= "DefaultModule".as_bytes().to_vec();
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into().try_into().unwrap(), name.into(), context.into(), tempo.into()));
     Subspace::<T>::set_max_allowed_uids( n ); 
 
     // Lets fill the network with 100 UIDS and no weights.
@@ -54,7 +53,6 @@ benchmarks! {
     let tempo: u16 = 1;
         let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
-    Subspace::<T>::do_add_network( caller_origin.clone().try_into().unwrap(), name.into(), tempo.into());
     Subspace::<T>::set_max_allowed_uids( n ); 
     Subspace::<T>::set_tempo( tempo );
 
@@ -102,10 +100,9 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
    
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     Subspace::<T>::set_max_allowed_uids( 4096 ); 
 
-   assert_ok!(Subspace::<T>::do_sudo_set_max_registrations_per_block(RawOrigin::Root.into().try_into().unwrap(), 4096 ));
+    assert_ok!(Subspace::<T>::do_sudo_set_max_registrations_per_block(RawOrigin::Root.into().try_into().unwrap(), 4096 ));
     
     let mut seed : u32 = 1; 
     let mut dests: Vec<u16> = vec![];
@@ -143,7 +140,6 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  context.into(), tempo, n ));
     Subspace::<T>::set_max_allowed_uids( 4096 ); 
     assert_eq!(Subspace::<T>::get_max_allowed_uids(), 4096);
 
@@ -169,7 +165,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let netuid = Subspace::<T>::get_netuid_for_name(name.clone()).unwrap();
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
     Subspace::<T>::set_max_allowed_uids( 4096 ); 
     assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
 
@@ -204,19 +199,12 @@ benchmarks! {
 
   }: update_module(RawOrigin::Signed( caller.clone() ), version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
-  benchmark_sudo_add_network {
-    let tempo: u16 = 1;
-    let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
-    let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
-
-  }: sudo_add_network(RawOrigin::<AccountIdOf<T>>::Root, name, tempo,)
 
   benchmark_sudo_remove_network {
     let tempo: u16 = 0;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
   }: sudo_remove_network(RawOrigin::<AccountIdOf<T>>::Root)
 
@@ -227,15 +215,6 @@ benchmarks! {
   //   let netuids: Vec<u16> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   //   let emission: Vec<u64> = vec![100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000];
 
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into()));
-  //   assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into())); 
 
   // }: sudo_set_emission_values(RawOrigin::<AccountIdOf<T>>::Roots, emission)
 
@@ -258,7 +237,6 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
   }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, weights_set_rate_limit)
 
@@ -271,7 +249,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let adjustment_interval: u16 = 12;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
   }: sudo_set_adjustment_interval(RawOrigin::<AccountIdOf<T>>::Root, adjustment_interval)
 
@@ -282,7 +259,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let target_registrations_per_interval: u16 = 300;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
   }: sudo_set_target_registrations_per_interval(RawOrigin::<AccountIdOf<T>>::Root, target_registrations_per_interval)
 
@@ -294,7 +270,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let max_allowed_uids: u16 = 4096;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
   }: sudo_set_max_allowed_uids(RawOrigin::<AccountIdOf<T>>::Root, max_allowed_uids)
 
   benchmark_sudo_set_min_allowed_weights {
@@ -304,7 +279,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let min_allowed_weights: u16 = 10;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
   }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, min_allowed_weights)
 
 
@@ -317,7 +291,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let immunity_period: u16 = 100;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
   }: sudo_set_immunity_period(RawOrigin::<AccountIdOf<T>>::Root, immunity_period)
 
   benchmark_sudo_set_max_weight_limit {
@@ -327,7 +300,6 @@ benchmarks! {
     let context: Vec<u8> = "{'context': 'boo'}".as_bytes().to_vec();= b"default".to_vec();
     let max_weight_limit: u16 = 100;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(), context.into(), tempo.into(), n.into()));
 
   }: sudo_set_max_weight_limit(RawOrigin::<AccountIdOf<T>>::Root, max_weight_limit)
 
@@ -339,7 +311,6 @@ benchmarks! {
     let tempo: u16 = 1;
     let max_registrations_per_block: u16 = 100;
 
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(),  name.into(), context.into(), tempo.into(), n.into()));
   }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, max_registrations_per_block)
 
 

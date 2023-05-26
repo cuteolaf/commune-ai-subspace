@@ -12,7 +12,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
 
         let mut modules = Vec::new();
-        let n = Self::get_subnetwork_n(netuid);
+        let n = Self::get_n(netuid);
         for uid in 0..n {
             let uid = uid;
 
@@ -30,9 +30,20 @@ impl<T: Config> Pallet<T> {
         return modules;
 	}
 
-    fn get_module( uid: u16) -> Option<ModuleInfo<T>> {
+    fn get_module(uid: u16) -> Option<ModuleInfo<T>> {
+        Self::get_module_for_uid(uid)
+    }
+
+
+    fn get_module_for_uid( uid: u16) -> Option<ModuleInfo<T>> {
         
         let key = Self::get_key_for_uid(uid);
+        let module = Self::get_module_for_key( &key.clone() ); 
+        return Some(module);
+    }
+
+    fn get_module_for_key( key:  &T::AccountId) -> Option<ModuleInfo<T>> {
+        
         let module_info = Self::get_module_info( &key.clone() );    
         let active = Self::get_active_for_uid( uid as u16 );
         let emission = Self::get_emission_for_uid(  uid as u16 );

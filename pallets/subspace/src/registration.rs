@@ -53,80 +53,73 @@ impl<T: Config> Pallet<T> {
 
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
-        let key = ensure_signed( origin.clone() )?;        
+        let key = ensure_signed( origin.clone() )?;   
+        ensure!(!Self::is_key_registered(&key),Error::<T>::AlreadyRegistered);  
+        ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
+        ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
+        
         log::info!("do_registration( key:{:?} )", key );
 
         // --- 4. Ensure that the key is not already registered.
-        let already_registered: bool  = Uids::<T>::contains_key(&key ); 
+        let already_registered: bool  =  Self::is_key_registered(&key); 
 
         let current_block_number: u64 = Self::get_current_block_as_u64();
         let mut uid: u16;
         let n: u16 = Self::get_n();
 
-        if !already_registered {
-            // If the network account does not exist we will create it here.
-            Self::create_account_if_non_existent( &key);         
-        
 
-            // Possibly there is no module slots at all.
-            ensure!( Self::get_max_allowed_uids() != 0, Error::<T>::NetworkDoesNotExist );
-            
-            if n < Self::get_max_allowed_uids() {
-
-                // --- 12.1.1 No replacement required, the uid appends the subnetwork.
-                // We increment the subnetwork count here but not below.
-                uid = n;
-
-                // --- 12.1.2 Expand subnetwork with new account.
-                Self::append_module(  &key );
-                log::info!("add new module account");
-            } else {
-                // --- 12.1.1 Replacement required.
-                // We take the module with the lowest pruning score here.
-                uid = Self::get_module_to_prune();
-
-                // --- 12.1.1 Replace the module account with the new info.
-                Self::replace_module( uid, &key );
-                log::info!("prune module");
-            }
-
-            // --- Record the registration and increment block and interval counters.
-            RegistrationsThisInterval::<T>::mutate( |val| *val += 1 );
-            RegistrationsThisBlock::<T>::mutate(|val| *val += 1 );
-            // ---Deposit successful event.
-            log::info!("ModuleRegistered(  uid:{:?} key:{:?}  ) ",  uid, key );
-            Self::deposit_event( Event::ModuleRegistered( uid, key.clone() ) );
+        // If the network account does not exist we will create it here.
+        Self::create_account_if_non_existent( &key);         
     
+        // Possibly there is no module slots at all.
+        ensure!( Self::get_max_allowed_uids() != 0, Error::<T>::NetworkDoesNotExist );
+        
+        if n < Self::get_max_allowed_uids() {
+
+            // --- 12.1.1 No replacement required, the uid appends the subnetwork.
+            // We increment the subnetwork count here but not below.
+            uid = n;
+
+            // --- 12.1.2 Expand subnetwork with new account.
+            Self::append_module(  &key );
+            log::info!("add new module account");
+        } else {
+            // --- 12.1.1 Replacement required.
+            // We take the module with the lowest pruning score here.
+            uid = Self::get_module_to_prune();
+
+            // --- 12.1.1 Replace the module account with the new info.
+            Self::replace_module( uid, &key );
+            log::info!("prune module");
         }
 
-        Self::do_update_module(origin.clone(),  ip, port, name, context );
+        let current_block: u64 = Self::get_current_block_as_u64(); 
+
+        let mut module = Self::get_module_info( &key );  
+        module.name = name.clone();
+        module.ip = ip;
+        module.port = port;
+        module.context = context.clone();
+        module.serve_block = current_block;
+        module.register_block = current_block;
+
+
+        Modules::<T>::insert( key.clone(), module.clone() );
+        ModuleNamespace::<T>::insert( name.clone(), uid );
+
+        // --- 8. Return is successful dispatch. 
+
+        // --- Record the registration and increment block and interval counters.
+        RegistrationsThisInterval::<T>::mutate( |val| *val += 1 );
+        RegistrationsThisBlock::<T>::mutate(|val| *val += 1 );
+        // ---Deposit successful event.
+        log::info!("ModuleRegistered(  uid:{:?} key:{:?}  ) ",  uid, key );
+        Self::deposit_event( Event::ModuleRegistered( uid, key.clone() ) );
 
         // --- 16. Ok and done.
         Ok(())
     }
 
-
-
-    pub fn do_transfer_registration(origin: T::RuntimeOrigin, uid: u16, new_key: T::AccountId ) -> DispatchResult {
-        // --- 1. Check that the caller has signed the transaction. 
-        // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
-        let key = ensure_signed( origin.clone() )?;        
-        log::info!("do_transfer_registration( key:{:?} netuid:{:?} uid:{:?} new_key:{:?} )", key, uid, new_key );
-
-        // --- 2. Ensure the passed network is valid.
-        ensure!( Self::if_subnet_exist(  ), Error::<T>::NetworkDoesNotExist ); 
-
-        // --- 3. Ensure the key is already registered.
-        ensure!( Uids::<T>::contains_key( &key ), Error::<T>::NotRegistered );
-
-        // --- 5. Ensure the passed block number is valid, not in the future or too old.
-        // Work must have been done within 3 blocks (stops long range attacks).
-        let current_block_number: u64 = Self::get_current_block_as_u64();
-        // --- 10. If the network account does not exist we will create it here.
-        Self::replace_module(  &key );
-
-        Ok(())
-    }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
@@ -138,6 +131,12 @@ impl<T: Config> Pallet<T> {
     // Determine which peer to prune from the network by finding the element with the lowest pruning score out of
     // immunity period. If all modules are in immunity period, return node with lowest prunning score.
     // This function will always return an element to prune.
+
+    pub fn get_prune_score_for_uid() {
+        let pruning_score:u16 = Self::get_emission_for_uid( module_uid_i );
+        return pruning_score;
+    }
+
     pub fn get_module_to_prune() -> u16 {
         let mut min_score : u16 = u16::MAX;
         let mut min_score_in_immunity_period = u16::MAX;
@@ -214,7 +213,6 @@ impl<T: Config> Pallet<T> {
         return hash_as_vec
     }
 
-
     // ---- The implementation for the extrinsic update_module which sets the ip endpoint information for a uid on a network.
     //
     // # Args:
@@ -273,72 +271,34 @@ impl<T: Config> Pallet<T> {
         if (name.len() > 0) {
             ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
             prev_module.name = name.clone();
-
+            let uid = ModuleNamespace::<T>::get(prev_name);
+            ModuleNamespace::<T>::insert( name.clone(), uid );
         }
 
         if (ip.len() > 0) {
             ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
             prev_module.ip = ip;
         }
+        if (port > 0) {
+            prev_module.port = port;
 
-        prev_module.port = port;
-
+        }
         if (name.len() > 0) {
             prev_module.context = context.clone();
+
         }
         
+        // set the serve block
         let current_block: u64 = Self::get_current_block_as_u64(); 
         prev_module.serve_block = current_block;
 
         Modules::<T>::insert( key.clone(), prev_module.clone() );
         let prev_name  = prev_module.name.clone();
-        ModuleNamespace::<T>::remove(prev_name);
-        ModuleNamespace::<T>::insert( name.clone(), uid );
-
+        
         // --- 7. We deposit module served event.
         log::info!("ModuleServed( key:{:?} ) ", key.clone() );
         Self::deposit_event(Event::ModuleServed( key.clone() ));
-
-        // --- 8. Return is successful dispatch. 
-        Ok(())
-    }
-
-
-    pub fn create_module( 
-        origin: T::RuntimeOrigin, 
-        ip: u128, 
-        port: u16, 
-        name: Vec<u8>,
-        context: Vec<u8>,
-    ) -> dispatch::DispatchResult {
-        // --- 1. We check the callers (key) signature.
-        let key = ensure_signed(origin)?;
-        // --- 2. Ensure the key is registered somewhere.
-        ensure!( Self::is_key_registered( &key ), Error::<T>::NotRegistered );  
-        ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
-        ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpType );
-                
-        let mut module = Self::get_module_info( &key );  
-
-        module.name = name.clone();
-        module.ip = ip;
-        module.port = port;
-        module.context = context.clone();
-
-        // set the serve and register block as the same
-        let current_block: u64 = Self::get_current_block_as_u64(); 
-        module.serve_block = current_block;
-        module.register_block = current_block;
-
-
-        Modules::<T>::insert( key.clone(), module.clone() );
-        ModuleNamespace::<T>::insert( name.clone(), uid );
-
-
-        // --- 7. We deposit module served event.
-        log::info!("ModuleServed( key:{:?} ) ", key.clone() );
-        Self::deposit_event(Event::ModuleServed( key.clone() ));
-
+        
         // --- 8. Return is successful dispatch. 
         Ok(())
     }
@@ -349,8 +309,6 @@ impl<T: Config> Pallet<T> {
         return ModuleNamespace::<T>::contains_key(name.clone());
         
     }
-
-
 
     /********************************
      --==[[  Helper functions   ]]==--
@@ -379,13 +337,6 @@ impl<T: Config> Pallet<T> {
                 ip: 0,
                 port: 0,
                 name: vec![],
-                context: vec![],
-                stake: vec![], // map of key to stake on this module/key (includes delegations)
-                emission: 0,
-                incentive: 0,
-                dividends: 0,
-                weights: vec![], // Vec of (uid, weight)
-                bonds: vec![], // Vec of (uid, bond)
 
             }
 
