@@ -9,7 +9,7 @@ use frame_support::pallet_prelude::DispatchError;
 
 
 impl<T: Config> Pallet<T> {
-	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
+	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo> {
 
         let mut modules = Vec::new();
         let n = Self::get_n(netuid);
@@ -30,22 +30,23 @@ impl<T: Config> Pallet<T> {
         return modules;
 	}
 
-    fn get_module(uid: u16) -> Option<ModuleInfo<T>> {
+    fn get_module(uid: u16) -> Option<ModuleInfo> {
         Self::get_module_for_uid(uid)
     }
 
 
-    fn get_module_for_uid( uid: u16) -> Option<ModuleInfo<T>> {
+    fn get_module_for_uid( uid: u16) -> Option<ModuleInfo> {
         
         let key = Self::get_key_for_uid(uid);
         let module = Self::get_module_for_key( &key.clone() ); 
         return Some(module);
     }
 
-    fn get_module_for_key( key:  &T::AccountId) -> Option<ModuleInfo<T>> {
+    fn get_module_for_key( key:  &T::AccountId) -> Option<ModuleInfo> {
         
+        let uid= Users::<T>::get(&key);
         let module_info = Self::get_module_info( &key.clone() );    
-        let active = Self::get_active_for_uid( uid as u16 );
+        let active = Self::get_active_for_uid(uid);
         let emission = Self::get_emission_for_uid(  uid as u16 );
         let incentive = Self::get_incentive_for_uid(  uid as u16 );
         let dividends = Self::get_dividends_for_uid(  uid as u16 );
@@ -54,18 +55,15 @@ impl<T: Config> Pallet<T> {
         let name = Self::get_name_for_uid(  uid as u16 );
 
 
-        let module = ModuleNetworkInfo {
+        let module = ModuleInfo {
             name: name.clone(),
             key: key.clone(),
             uid: uid.into(),
             active: active,
-            stake: stake,
             emission: emission.into(),
             incentive: incentive.into(),
             dividends: dividends.into(),
             last_update: last_update.into(),
-            weights: weights,
-            bonds: bonds,
             context: context.clone(),
         };
         
@@ -97,7 +95,7 @@ impl<T: Config> Pallet<T> {
     // Replace the module under this uid.
     pub fn remove_module( uid: u16 ) {
 
-        log::debug!("replace_module( | uid_to_replace: {:?} | new_key: {:?} ) ", uid_to_replace, new_key );
+        log::debug!("replace_module( | uid_to_replace: {:?} ) ", uid );
 
         // 1. Get the old key under this position.
         let old_key: T::AccountId = Keys::<T>::get( uid );
@@ -146,7 +144,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn is_uid_registered(uid: u16) -> bool {
-        return  Self::<T>::is_uid_exist( uid);
+        return  Self::is_uid_exist( uid);
     }
 
     // Returs the key under the network uid as a Result. Ok if the uid is taken.

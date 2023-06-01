@@ -56,12 +56,11 @@ mod benchmarks;
 mod epoch;
 mod math;
 mod network;
-mod module;
 mod registration;
 mod staking;
 mod weights;
 
-pub mod module_info;
+pub mod module;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -169,15 +168,9 @@ pub mod pallet {
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultKeys<T:Config>() -> Vec<u16> { vec![ ] }
-	#[pallet::type_value]
-
 
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
-	pub type N<T:Config> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] //  --> network_is_added
-	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
-	#[pallet::storage] // --- DMAP () -> registration_requirement
-	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
+	pub type N<T:Config> = StorageValue<_, u16, ValueQuery, DefaultN<T>>;
 
 	// ==============================
 	// ==== Subnetwork Features =====
@@ -218,14 +211,12 @@ pub mod pallet {
         pub port: u16, // --- Module u16 encoded port.
         pub name: Vec<u8>, // --- Module ip type, 4 for ipv4 and 6 for ipv6.
 		pub context: Vec<u8>, // --- Module context.
-		pub last_update: Compact<u64>, // --
+		pub last_update: u64, // --
 		// Subnet Info
-		pub stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
-		pub emission: Compact<u64>,
-		pub incentive: Compact<u16>,
-		pub dividends: Compact<u16>,
-		pub weights: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, weight)
-		pub bonds: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, bond)
+		// pub stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
+		pub emission: u16,
+		pub incentive: u16,
+		pub dividends: u16,
 	}
 
 	// Rate limiting
@@ -246,7 +237,7 @@ pub mod pallet {
 	#[pallet::storage] //  --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
 	#[pallet::storage] // --- MAP ( key ) --> module_info
-	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
+	pub(super) type Modules<T:Config> = StorageMap<_, Identity, T::AccountId, ModuleInfo, OptionQuery>;
 	
 	// =======================================
 	// ==== Subnetwork Hyperparam storage ====
@@ -313,30 +304,28 @@ pub mod pallet {
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
 	#[pallet::storage] // --- DMAP ( key ) --> uid
-	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
+	pub(super) type Uids<T:Config> = StorageValue<_, T::AccountId, u16, OptionQuery>;
 	#[pallet::storage] // --- DMAP ( uid ) --> key
-	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
+	pub(super) type Keys<T:Config> = StorageValue<_,  T::AccountId, ValueQuery, DefaultKey<T> >;
 
 	#[pallet::storage] // --- DMAP () --> emission
-	pub(super) type LoadedEmission<T:Config> = StorageMap< _, Identity, u16, Vec<(T::AccountId, u64)>, OptionQuery >;
+	pub(super) type LoadedEmission<T:Config> = StorageValue< _,  Vec<(T::AccountId, u64)>, OptionQuery >;
 
 	#[pallet::storage] // --- DMAP () --> active
-	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
+	pub(super) type Active<T:Config> = StorageValue< _, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
 	#[pallet::storage] // --- DMAP () --> incentive
-	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
+	pub(super) type Incentive<T:Config> = StorageValue< _,  Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> dividends
-	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
+	pub(super) type Dividends<T:Config> = StorageValue< _, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> dividends
-	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
+	pub(super) type Emission<T:Config> = StorageValue< _, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
 	#[pallet::storage] // --- DMAP () --> last_update
-	pub(super) type LastUpdate<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, EmptyU64Vec<T>>;
-	#[pallet::storage] // --- DMAP () --> pruning_scores
-	
+	pub(super) type LastUpdate<T:Config> = StorageValue< _,  Vec<u64>, ValueQuery, EmptyU64Vec<T>>;	
 
 	#[pallet::storage] // --- DMAP ( uid ) --> weights
-    pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
+    pub(super) type Weights<T:Config> = StorageMap<_,  Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 	#[pallet::storage] // --- DMAP ( uid ) --> bonds
-    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
+    pub(super) type Bonds<T:Config> = StorageMap<_,  Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -345,27 +334,27 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		// Event documentation should end with an array that provides descriptive names for event
 		// parameters. [something, who]
-		NetworkAdded( u16, Vec<u8> ),	// --- Event created when a new network is added.
-		NetworkRemoved( u16 ), // --- Event created when a network is removed.
+		NetworkAdded(  Vec<u8> ),	// --- Event created when a new network is added.
+		NetworkRemoved(  ), // --- Event created when a network is removed.
 		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the key staking account.
 		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the coldkey account.
-		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
-		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
-		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
-		BulkBalancesSet(u16, u16),
-		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
-		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
-		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
-		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a subnet.
-		MaxRegistrationsPerBlockSet( u16, u16), // --- Event created when we set max registrations per block
-		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
-		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
-		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
-		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
-		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
+		WeightsSet(  u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
+		ModuleRegistered(  u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
+		BulkModulesRegistered(  u16 ), // --- Event created when multiple uids have been concurrently registered.
+		BulkBalancesSet( u16),
+		MaxAllowedUidsSet(  u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
+		MaxWeightLimitSet(  u16 ), // --- Event created when the max weight limit has been set.
+		AdjustmentIntervalSet(  u16 ), // --- Event created when the adjustment interval is set for a subnet.
+		RegistrationPerIntervalSet(  u16 ), // --- Event created when registeration per interval is set for a subnet.
+		MaxRegistrationsPerBlockSet(  u16), // --- Event created when we set max registrations per block
+		ActivityCutoffSet(  u16 ), // --- Event created when an activity cutoff is set for a subnet.
+		MinAllowedWeightSet(  u16 ), // --- Event created when minimun allowed weight is set for a subnet.
+		WeightsSetRateLimitSet(  u64 ), // --- Event create when weights set rate limit has been set for a subnet.
+		ImmunityPeriodSet(u16), // --- Event created when immunity period is set for a subnet.
+		ModuleServed(  T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
-		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
+		ServingRateLimitSet( u64 ), // --- Event created when setting the prometheus serving rate limit.
 		TxRateLimitSet( u64 ), // --- Event created when setting the transaction rate limit.
 	}
 
@@ -431,62 +420,18 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			// Set initial total issuance from balances
-			TotalIssuance::<T>::put(self.balances_issuance);
 
 			// Subnet config values
-			let name = "commune".as_bytes().to_vec();
-			let tempo = 99;
-			let n = 4096;
-
-			let netuid = TotalNetworks::<T>::get();
-			TotalNetworks::<T>::mutate( |n| *n += 1 );
-	
+			let tempo = 10;
+			let n = 4096;	
 
 			// --- 4. Fill tempo memory item.
 			Tempo::<T>::put( tempo );
 	
 		
 			MaxAllowedUids::<T>::put( n );
-	
 
-			
-			// --- Fill tempo memory item.
-			Tempo::<T>::put( tempo);
 
-			// Set max allowed uids
-			MaxAllowedUids::<T>::put( n);
-
-			let mut next_uid = 0;
-
-			for (coldkey, keys) in self.stakes.iter() {
-				for (key, stake_uid) in keys.iter() {
-					let (stake, uid) = stake_uid;
-
-					// Expand Yuma with new position.
-					Rank::<T>::mutate(|v| v.push(0));
-					Active::<T>::mutate(|v| v.push(true));
-					Emission::<T>::mutate(|v| v.push(0));
-					Incentive::<T>::mutate(|v| v.push(0));
-					Dividends::<T>::mutate(|v| v.push(0));
-					LastUpdate::<T>::mutate(|v| v.push(0));
-			
-					// Insert account information.
-					Keys::<T>::insert(uid, key.clone()); // Make key - uid association.
-					Uids::<T>::insert(key.clone(), uid); // Make uid - key association.
-					BlockAtRegistration::<T>::insert(uid, 0); // Fill block at registration.
-	
-					// Fill stake information.
-	
-					TotalKeyStake::<T>::insert(key.clone(), stake);
-
-					// Update total issuance value
-					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
-	
-					Stake::<T>::insert(key.clone(),  stake);
-	
-					next_uid += 1;
-				}
-			}
 
 		}
 	}
@@ -720,20 +665,6 @@ pub mod pallet {
 		}
 
 
-		#[pallet::weight((Weight::from_ref_time(19_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn update_module(
-			origin:OriginFor<T>, 
-			ip: u128, 
-			port: u16,
-			name : Vec<u8>,
-			context: Vec<u8>
-		) -> DispatchResult {
-			Self::do_update_module( origin, ip, port, name, context ) 
-		}
-
-
 
 		// ---- Registers a new module to the subnetwork. 
 		//
@@ -817,7 +748,7 @@ pub mod pallet {
 
 		#[pallet::weight((Weight::from_ref_time(10_000_000)
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>: u16, serving_rate_limit: u64 ) -> DispatchResult {  
+		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>, serving_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_serving_rate_limit( origin, serving_rate_limit )
 		}
 
@@ -830,7 +761,7 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(15_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
+		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, weights_set_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_weights_set_rate_limit( origin, weights_set_rate_limit )
 		}
 
@@ -838,32 +769,32 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>: u16, adjustment_interval: u16 ) -> DispatchResult { 
+		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>, adjustment_interval: u16 ) -> DispatchResult { 
 			Self::do_set_adjustment_interval( origin, adjustment_interval )
 		}
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_target_registrations_per_interval( origin:OriginFor<T>: u16, target_registrations_per_interval: u16 ) -> DispatchResult {
+		pub fn sudo_set_target_registrations_per_interval( origin:OriginFor<T>, target_registrations_per_interval: u16 ) -> DispatchResult {
 			Self::do_sudo_set_target_registrations_per_interval( origin, target_registrations_per_interval )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>: u16, activity_cutoff: u16 ) -> DispatchResult {
+		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>, activity_cutoff: u16 ) -> DispatchResult {
 			Self::do_sudo_set_activity_cutoff( origin, activity_cutoff )
 		}
 
 		#[pallet::weight((Weight::from_ref_time(18_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>: u16, max_allowed_uids: u16 ) -> DispatchResult {
+		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>, max_allowed_uids: u16 ) -> DispatchResult {
 			Self::do_sudo_set_max_allowed_uids(origin, max_allowed_uids )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_allowed_weights( origin:OriginFor<T>: u16, min_allowed_weights: u16 ) -> DispatchResult {
+		pub fn sudo_set_min_allowed_weights( origin:OriginFor<T>, min_allowed_weights: u16 ) -> DispatchResult {
 			Self::do_sudo_set_min_allowed_weights( origin, min_allowed_weights )
 		}
 
@@ -871,19 +802,19 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_immunity_period( origin:OriginFor<T>: u16, immunity_period: u16 ) -> DispatchResult {
+		pub fn sudo_set_immunity_period( origin:OriginFor<T>, immunity_period: u16 ) -> DispatchResult {
 			Self::do_sudo_set_immunity_period( origin, immunity_period )
 		}
 		#[pallet::weight((Weight::from_ref_time(13_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>: u16, max_weight_limit: u16 ) -> DispatchResult {
+		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>, max_weight_limit: u16 ) -> DispatchResult {
 			Self::do_sudo_set_max_weight_limit( origin, max_weight_limit )
 		}
 		#[pallet::weight((Weight::from_ref_time(15_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_registrations_per_block(origin: OriginFor<T>: u16, max_registrations_per_block: u16 ) -> DispatchResult {
+		pub fn sudo_set_max_registrations_per_block(origin: OriginFor<T>, max_registrations_per_block: u16 ) -> DispatchResult {
 			Self::do_sudo_set_max_registrations_per_block(origin, max_registrations_per_block )
 		}
 
@@ -913,7 +844,7 @@ pub mod pallet {
 	// ---- Subspace helper functions.
 	impl<T: Config> Pallet<T> {
 		// --- Returns the transaction priority for setting weights.
-		pub fn get_priority_set_weights( key: &T::AccountId: u16 ) -> u64 {
+		pub fn get_priority_set_weights( key: &T::AccountId ) -> u64 {
 			if Uids::<T>::contains_key( &key ) {
 				let uid = Self::get_uid_for_key( &key.clone()).unwrap();
 				let current_block_number: u64 = Self::get_current_block_as_u64();
@@ -962,7 +893,7 @@ impl<T: Config + Send + Sync + TypeInfo> SubspaceSignedExtension<T> where
 		return u64::max_value();
 	}
 
-	pub fn get_priority_set_weights( who: &T::AccountId: u16 ) -> u64 {
+	pub fn get_priority_set_weights( who: &T::AccountId ) -> u64 {
 		// Return the non vanilla priority for a set weights call.
 
 		return Pallet::<T>::get_priority_set_weights( who );
@@ -1004,7 +935,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
 	) -> TransactionValidity {
 		match call.is_sub_type() {
 			Some(Call::set_weights{..}) => {
-				let priority: u64 = Self::get_priority_set_weights(who, *netuid);
+				let priority: u64 = Self::get_priority_set_weights(who);
                 Ok(ValidTransaction {
                     priority: priority,
                     longevity: 1,
@@ -1066,10 +997,6 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                 Ok((CallType::Register, transaction_fee, who.clone()))
             }
 
-            Some(Call::update_module{..}) => {
-                let transaction_fee = 0;
-                Ok((CallType::Serve, transaction_fee, who.clone()))
-            }
             Some(Call::update_module{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))

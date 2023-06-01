@@ -124,6 +124,8 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_emission_for_uid(uid: u16) -> u64 {let vec =  Emission::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_active_for_uid(uid: u16) -> bool { let vec = Active::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
+    
+    
     pub fn get_incentive_for_uid(uid: u16) -> u16 { let vec = Incentive::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_dividends_for_uid(uid: u16) -> u16 { let vec = Dividends::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_last_update_for_uid(uid: u16) -> u64 { let vec = LastUpdate::<T>::get(); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }

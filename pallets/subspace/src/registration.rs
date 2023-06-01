@@ -132,8 +132,8 @@ impl<T: Config> Pallet<T> {
     // immunity period. If all modules are in immunity period, return node with lowest prunning score.
     // This function will always return an element to prune.
 
-    pub fn get_prune_score_for_uid() {
-        let pruning_score:u16 = Self::get_emission_for_uid( module_uid_i );
+    pub fn get_prune_score_for_uid(uid:u16) {
+        let pruning_score:u16 = Self::get_emission_for_uid( uid );
         return pruning_score;
     }
 
@@ -271,7 +271,7 @@ impl<T: Config> Pallet<T> {
         if (name.len() > 0) {
             ensure!(!Self::name_exists( name.clone()) , Error::<T>::ModuleNameAlreadyExists); 
             prev_module.name = name.clone();
-            let uid = ModuleNamespace::<T>::get(prev_name);
+            let uid = ModuleNamespace::<T>::get(prev_module.name);
             ModuleNamespace::<T>::insert( name.clone(), uid );
         }
 
@@ -315,7 +315,7 @@ impl<T: Config> Pallet<T> {
     *********************************/
 
     pub fn module_passes_rate_limit( prev_module_info: &ModuleInfo, current_block: u64 ) -> bool {
-        let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
+        let rate_limit: u64 = Self::get_serving_rate_limit();
         let last_serve = prev_module_info.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
     }

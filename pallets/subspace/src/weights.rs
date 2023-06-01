@@ -56,11 +56,11 @@ impl<T: Config> Pallet<T> {
     // 	* 'MaxWeightExceeded':
     // 		- Attempting to set weights with max value exceeding limit.
     //
-    pub fn do_set_weights( origin: T::RuntimeOrigin: u16, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
+    pub fn do_set_weights( origin: T::RuntimeOrigin, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
 
         // --- 1. Check the caller's signature. This is the key of a registered account.
         let key = ensure_signed( origin )?;
-        log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", key, uids, values );
+        log::info!("do_set_weights( origin:{:?} uids:{:?}, values:{:?})", key, uids, values );
 
         // --- 2. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
@@ -156,7 +156,7 @@ impl<T: Config> Pallet<T> {
 
     // Returns True if the uids and weights are have a valid length for uid on network.
     pub fn check_length( uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
-        let min_allowed_length: usize = Self::get_min_allowed_weights(netuid) as usize;
+        let min_allowed_length: usize = Self::get_min_allowed_weights() as usize;
 
         // Check self weight. Allowed to set single value for self weight.
         if Self::is_self_weight(uid, uids, weights) {

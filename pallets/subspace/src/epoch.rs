@@ -55,7 +55,7 @@ impl<T: Config> Pallet<T> {
         // ===========
 
         let mut keys: Vec<(u16, T::AccountId)> = vec![];
-        for ( uid_i, key ) in < Keys<T> as IterableStorageMap<u16, T::AccountId >>::iter_prefix() {
+        for ( uid_i, key ) in < Keys<T> as IterableStorageMap<u16, T::AccountId >>::iter() {
             keys.push( (uid_i, key) ); 
         }
         log::trace!( "keys: {:?}", &keys );
@@ -104,13 +104,10 @@ impl<T: Config> Pallet<T> {
         // == Ranks, Incentive ==
         // =============================
 
-        // Compute ranks: r_j = SUM(i) w_ij * s_i.
         let mut incentive: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
-        // log::trace!( "R (after): {:?}", &ranks );
 
         inplace_normalize( &mut incentive );  // range: I32F32(0, 1)
-        let incentive: Vec<I32F32> = ranks.clone();
-        log::trace!( "I (=R): {:?}", &incentive );
+        log::trace!( "I: {:?}", &incentive );
 
         // =========================
         // == Bonds and Dividends ==
@@ -168,9 +165,6 @@ impl<T: Config> Pallet<T> {
         log::trace!( "nE: {:?}", &normalized_emission );
         log::trace!( "E: {:?}", &emission );
 
-        // Set pruning scores.
-        log::trace!( "P: {:?}", &pruning_scores );
-
         // ===================
         // == Value storage ==
         // ===================
@@ -217,7 +211,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_weights_sparse()-> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter() {
             for (uid_j, weight_ij) in weights_i.iter() { 
                 weights [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *weight_ij ) ));
             }
@@ -228,7 +222,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_weights()-> Vec<Vec<I32F32>> { 
         let n: usize = Self::get_n() as usize; 
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
-        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter() {
             for (uid_j, weight_ij) in weights_i.iter() { 
                 weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed(  *weight_ij );
             }
@@ -239,7 +233,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_bonds()-> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_n() as usize; 
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix() {
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageMap<u16, Vec<(u16, u16)> >>::iter() {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
                 bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
             }
@@ -290,7 +284,6 @@ impl<T: Config> Pallet<T> {
             Self::emit_inflation_through_account( &key, *amount );
         }            
         LoadedEmission::<T>::remove();
-        }
     }
 
     // Iterates through networks queues more emission onto their pending storage.
@@ -305,7 +298,7 @@ impl<T: Config> Pallet<T> {
         // --- 2. Queue the emission due to this network.
         let new_queued_emission = EmissionValues::<T>::get();
         PendingEmission::<T>::mutate( | queued | *queued += new_queued_emission );
-        log::debug!("netuid_i: {:?} queued_emission: +{:?} ", new_queued_emission );  
+        log::debug!(" queued_emission: +{:?} ", new_queued_emission );  
         // --- 3. Check to see if this network has reached tempo.
         if Self::blocks_until_next_epoch( tempo, block_number ) != 0 {
             // --- 3.1 No epoch, increase blocks since last step and continue,
@@ -377,7 +370,7 @@ impl<T: Config> Pallet<T> {
         let last_adjustment_block: u64 = Self::get_last_adjustment_block();
         let adjustment_interval: u16 = Self::get_adjustment_interval();
         let current_block: u64 = Self::get_current_block_as_u64( ); 
-        log::debug!("netuid: {:?} last_adjustment_block: {:?} adjustment_interval: {:?} current_block: {:?}", 
+        log::debug!("last_adjustment_block: {:?} adjustment_interval: {:?} current_block: {:?}", 
             
             last_adjustment_block,
             adjustment_interval,
