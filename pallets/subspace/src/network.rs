@@ -63,8 +63,8 @@ impl<T: Config> Pallet<T> {
         netuid: u16,
         stake: u64,
         immunity_period: u16,
-        min_allowed_weights: u16,
-        max_allowed_uids: u16,
+        min_weights: u16,
+        max_n: u16,
         tempo: u16,
         founder: T::AccountId,
     ) -> DispatchResult {
@@ -74,7 +74,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_netuid_exists( netuid ), Error::<T>::SubnetNameAlreadyExists );
         ensure!( Self::is_subnet_founder( netuid, &key ), Error::<T>::NotSubnetFounder );
 
-        Self::update_network_for_netuid( netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founder);
+        Self::update_network_for_netuid( netuid, stake, immunity_period, min_weights, max_n, tempo, founder);
         // --- 16. Ok and done.
         Ok(())
     }
@@ -83,15 +83,15 @@ impl<T: Config> Pallet<T> {
     pub fn update_network_for_netuid(netuid: u16,
                     stake: u64,
                     immunity_period: u16,
-                    min_allowed_weights: u16,
-                    max_allowed_uids: u16,
+                    min_weights: u16,
+                    max_n: u16,
                     tempo: u16,
-                    founder: T::AccountId,) {
+                    founders: Vec<T::AccountId>,) {
         Tempo::<T>::insert( netuid, tempo);
-        MaxAllowedUids::<T>::insert( netuid, max_allowed_uids );
+        MaxN::<T>::insert( netuid, max_n );
         ImmunityPeriod::<T>::insert( netuid, immunity_period );
-        MinAllowedWeights::<T>::insert( netuid, min_allowed_weights );
-        Founder::<T>::insert( netuid, founder );
+        MinWeights::<T>::insert( netuid, min_weights );
+        Founders::<T>::insert( netuid, founders );
     }
 
 
@@ -99,9 +99,9 @@ impl<T: Config> Pallet<T> {
     pub fn default_subnet() -> SubnetInfo {
         let netuid: u16 = 0;
         return SubnetInfo {
-            immunity_period: MinAllowedWeights::<T>::get( netuid ),
-            min_allowed_weights: ImmunityPeriod::<T>::get( netuid ),
-            max_allowed_uids:  MaxAllowedUids::<T>::get( netuid ),
+            immunity_period: MinWeights::<T>::get( netuid ),
+            min_weights: ImmunityPeriod::<T>::get( netuid ),
+            max_n:  MaxN::<T>::get( netuid ),
             tempo: Tempo::<T>::get( netuid ),
             n: N::<T>::get( netuid ),
             netuid: netuid,
@@ -117,7 +117,7 @@ impl<T: Config> Pallet<T> {
 
 
     pub fn is_subnet_founder( netuid: u16, key: &T::AccountId ) -> bool {
-        return Founder::<T>::get( netuid) == *key;
+        return Founders::<T>::get( netuid) == *key;
     }
 
 
@@ -136,9 +136,9 @@ impl<T: Config> Pallet<T> {
         let netuid = Self::add_network( 
                             name.clone(),
                             default_subnet.stake + stake, 
-                            default_subnet.max_allowed_uids, 
+                            default_subnet.max_n, 
                             default_subnet.immunity_period,
-                            default_subnet.min_allowed_weights,
+                            default_subnet.min_weights,
                             default_subnet.tempo,
                             &key, );
 
@@ -172,11 +172,11 @@ impl<T: Config> Pallet<T> {
     pub fn add_network( 
                        name: Vec<u8>,
                        stake: u64,
-                       max_allowed_uids: u16,
+                       max_n: u16,
                        immunity_period: u16,
-                       min_allowed_weights: u16,
+                       min_weights: u16,
                        tempo: u16,
-                       founder: &T::AccountId, 
+                       founders: Vec<T::AccountId>, 
                     ) -> u16 {
 
         // --- 1. Enfnsure that the network name does not already exist.
@@ -193,11 +193,11 @@ impl<T: Config> Pallet<T> {
         }
 
         Tempo::<T>::insert( netuid, tempo);
-        MaxAllowedUids::<T>::insert( netuid, max_allowed_uids );
+        MaxN::<T>::insert( netuid, max_n );
         ImmunityPeriod::<T>::insert( netuid, immunity_period );
-        MinAllowedWeights::<T>::insert( netuid, min_allowed_weights );
+        MinWeights::<T>::insert( netuid, min_weights );
         SubnetNamespace::<T>::insert( name.clone(), netuid );
-        Founder::<T>::insert( netuid, founder );
+        Founders::<T>::insert( netuid,founders);
 
         // set stat once network is created
         TotalSubnets::<T>::mutate( |n| *n += 1 );
@@ -217,8 +217,6 @@ impl<T: Config> Pallet<T> {
     // Initializes a new subnetwork under netuid with parameters.
     //
     pub fn if_subnet_name_exists(name: Vec<u8>) -> bool {
-       
-   
         return  SubnetNamespace::<T>::contains_key(name.clone()).into();
     }
 
@@ -269,9 +267,12 @@ impl<T: Config> Pallet<T> {
         }
         let netuid = Self::get_netuid_for_name( name.clone() );
         SubnetNamespace::<T>::remove( name.clone() );
-        // --- 4. Erase all memory associated with the network.
 
-        // --- 1. Remove incentive mechanism memory.
+    
+        for ( uid, key ) in <Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId>>::iter_prefix( netuid) {
+            Stake::<T>::remove(key.clone());
+        }
+
         Uids::<T>::clear_prefix( netuid, u32::max_value(), None );
         Keys::<T>::clear_prefix( netuid, u32::max_value(), None );
         Weights::<T>::clear_prefix( netuid, u32::max_value(), None );
@@ -283,17 +284,13 @@ impl<T: Config> Pallet<T> {
 
         // --- 2. Erase network parameters.
         Tempo::<T>::remove( netuid );
-        MaxAllowedUids::<T>::remove( netuid );
+        MaxN::<T>::remove( netuid );
         ImmunityPeriod::<T>::remove( netuid );
-        MinAllowedWeights::<T>::remove( netuid );
+        MinWeights::<T>::remove( netuid );
         N::<T>::remove( netuid );
-
-        // --- 3. Erase network stake, and remove network from list of networks.
-        for ( key, stated_amount ) in <Stake<T> as IterableStorageDoubleMap<u16, T::AccountId, u64> >::iter_prefix(netuid){
-            Self::decrease_stake_on_account( netuid, &key, stated_amount );
-        }
         // --- 4. Remove all stake.
-        Stake::<T>::remove_prefix( netuid, None );
+
+        Stake::<T>::remove( netuid );
         SubnetTotalStake::<T>::remove( netuid );
         TotalSubnets::<T>::mutate(|val| *val -= 1);
         // --- 4. Emit the event.
@@ -314,9 +311,9 @@ impl<T: Config> Pallet<T> {
 
         let immunity_period = Self::get_immunity_period(netuid);
         let name = Self::get_name_for_netuid(netuid);
-        let min_allowed_weights = Self::get_min_allowed_weights(netuid);
+        let min_weights = Self::get_min_weights(netuid);
         let n = Self::get_subnetwork_n(netuid);
-        let max_allowed_uids = Self::get_max_allowed_uids(netuid);
+        let max_n = Self::get_max_n(netuid);
         let tempo = Self::get_tempo(netuid);
 
 
@@ -325,9 +322,9 @@ impl<T: Config> Pallet<T> {
             immunity_period: immunity_period.into(),
             name: name,
             netuid: netuid.into(),
-            min_allowed_weights: min_allowed_weights.into(),
+            min_weights: min_weights.into(),
             n: n.into(),
-            max_allowed_uids: max_allowed_uids.into(),
+            max_n: max_n.into(),
             tempo: tempo.into(),
             emission: SubnetEmission::<T>::get(netuid).into(),
             stake: SubnetTotalStake::<T>::get(netuid).into(),
@@ -398,12 +395,12 @@ impl<T: Config> Pallet<T> {
         return Self::get_stake_for_key( netuid, &Self::get_key_for_uid( netuid, module_uid) )
     }
 
-    pub fn get_stake_for_key( netuid: u16, key: &T::AccountId) -> u64 { 
-        if Self::is_key_registered_on_network( netuid, &key) {
-            return Stake::<T>::get( netuid, &key );
-        } else {
-            return 0;
+    pub fn get_stake_for_key( netuid: u16,  key: &T::AccountId) -> u64 { 
+        stake: u16 = 0;
+        for ( netuid, stated_amount ) in <Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64> >::iter_prefix(key){
+            stake += stated_amount ;
         }
+        return stake;
     }
     
     
@@ -440,7 +437,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_last_update( netuid:u16 ) -> Vec<u64> { LastUpdate::<T>::get( netuid ) }
     
     // Emission is the same as the Yomama params 
-
     
     pub fn set_last_update_for_uid( netuid:u16, uid: u16, last_update: u64 ) { 
         let mut updated_last_update_vec = Self::get_last_update( netuid ); 
@@ -478,20 +474,20 @@ impl<T: Config> Pallet<T> {
     pub fn get_immunity_period(netuid: u16 ) -> u16 { ImmunityPeriod::<T>::get( netuid ) }
     pub fn set_immunity_period( netuid: u16, immunity_period: u16 ) { ImmunityPeriod::<T>::insert( netuid, immunity_period ); }
 
-    pub fn get_min_allowed_weights( netuid:u16 ) -> u16 {
-        let min_allowed_weights = MinAllowedWeights::<T>::get( netuid ) ; 
+    pub fn get_min_weights( netuid:u16 ) -> u16 {
+        let min_weights = MinWeights::<T>::get( netuid ) ; 
         let n = Self::get_subnetwork_n(netuid);
-        // if n < min_allowed_weights, then return n
-        if (n < min_allowed_weights) {
+        // if n < min_weights, then return n
+        if (n < min_weights) {
             return n;
         } else {
-            return min_allowed_weights;
+            return min_weights;
         }
         }
-    pub fn set_min_allowed_weights( netuid: u16, min_allowed_weights: u16 ) { MinAllowedWeights::<T>::insert( netuid, min_allowed_weights ); }
+    pub fn set_min_weights( netuid: u16, min_weights: u16 ) { MinWeights::<T>::insert( netuid, min_weights ); }
 
-    pub fn get_max_allowed_uids( netuid: u16 ) -> u16  { MaxAllowedUids::<T>::get( netuid ) }
-    pub fn set_max_allowed_uids(netuid: u16, max_allowed: u16) { MaxAllowedUids::<T>::insert( netuid, max_allowed ); }
+    pub fn get_max_n( netuid: u16 ) -> u16  { MaxN::<T>::get( netuid ) }
+    pub fn set_max_n(netuid: u16, max_allowed: u16) { MaxN::<T>::insert( netuid, max_allowed ); }
             
 
 
@@ -500,6 +496,21 @@ impl<T: Config> Pallet<T> {
 
     pub fn is_registered(netuid: u16, key: &T::AccountId) -> bool {
         return Uids::<T>::contains_key(netuid, &key)
+    }
+
+    pub fn get_keys( netuid : u16) ->  Vec< T::AccountId>  {
+        let mut keys: Vec< T::AccountId> = vec![];
+        for ( uid, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
+            keys.push( key ); 
+        }
+        return keys
+    }
+    pub fn get_uids( netuid : u16) ->  Vec<u16> {
+        let mut uids: Vec<u16> = vec![];
+        for ( uid, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
+            uids.push( uid ); 
+        }
+        return uids
     }
 
 }

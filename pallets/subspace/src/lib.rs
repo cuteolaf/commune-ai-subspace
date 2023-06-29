@@ -110,15 +110,19 @@ pub mod pallet {
 	// ==== Subnetwork Features =====
 	// ==============================
 
+
+	
+
 	#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-	pub struct SubnetInfo {
+	pub struct Subnet {
 
 		// --- parameters
 		pub name: Vec<u8>,
 		pub immunity_period: u16, // how many blocks to wait before rewarding models
-		pub min_allowed_weights: u16, // min number of weights allowed to be registered in this subnet
-		pub max_allowed_uids: u16, // max number of uids allowed to be registered in this subnet
+		pub min_weights: u16, // min number of weights allowed to be registered in this subnet
+		pub max_n: u16, // max number of uids allowed to be registered in this subnet
 		pub tempo: u16, // how many blocks to wait before rewarding models
+		pub policy: Vec<u8>, // the policy of the subnet, (supreme leader, democracy)
 		// pub mode: u8, // --- 0 for open, 1 for closed.
 		// state variables
 		pub netuid: u16, // --- unique id of the network
@@ -126,6 +130,8 @@ pub mod pallet {
 		pub stake: u64,
 		pub emission: u64,
 	}
+
+
 
 
 
@@ -139,19 +145,19 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
-	pub fn DefaultMaxAllowedUids<T: Config>() -> u16 { 4096 }
+	pub fn DefaultMaxN<T: Config>() -> u16 { 4096 }
 	#[pallet::type_value] 
 	pub fn DefaultImmunityPeriod<T: Config>() -> u16 { 100 }
 	#[pallet::type_value] 
-	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { 1 }
+	pub fn DefaultMinWeights<T: Config>() -> u16 { 1 }
 	#[pallet::type_value] 
 	pub fn DefaultMaxNameLength<T: Config>() -> u16 { 32 }
 	#[pallet::type_value]
 	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
 	#[pallet::type_value] 
-	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { 1 }
+	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { 10 }
 	#[pallet::type_value] 
-	pub fn DefaultMaxAllowedSubnets<T: Config>() -> u16 { 1000 }
+	pub fn DefaultMaxAllowedSubnets<T: Config>() -> u16 { 100 }
 	#[pallet::type_value]
 	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
 	#[pallet::type_value]
@@ -164,7 +170,10 @@ pub mod pallet {
 	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
 	pub type N<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
-	pub type Founder<T:Config> = StorageMap<_, Identity, u16, T::AccountId, ValueQuery, DefaultAccount<T>>;
+	pub type Founders<T:Config> = StorageMap<_, Identity, u16, T::AccountId, ValueQuery, DefaultAccount<T>>;
+	
+	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
+	pub type Subnets<T:Config> = StorageMap<_, Identity, u16, Subnet, ValueQuery>;
 
 	#[pallet::storage] // --- MAP ( netuid ) --> epoch
 	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
@@ -172,15 +181,15 @@ pub mod pallet {
 	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
 	#[pallet::storage] // --- DMAP ( netuid ) --> bonds
 	pub(super) type MaxNameLength<T:Config> = StorageValue< _, u16, ValueQuery, DefaultMaxNameLength<T> >;
-	
+
 	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>,  u16 , ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_uids
-	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> max_n
+	pub type MaxN<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxN<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> immunity_period
 	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
-	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> min_weights
+	pub type MinWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinWeights<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
@@ -230,8 +239,10 @@ pub mod pallet {
 
 	#[pallet::storage] // --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
-	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
-	pub type Stake<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, T::AccountId, u64, ValueQuery, DefaultStake<T>>;
+	#[pallet::storage] // --- DMAP ( delegate, key ) --> stake | Returns the stake under a key prefixed by key.
+	pub type DelegeteStake<T:Config> = StorageDoubleMap<_,Identity,  T::AccountId,  Identity, T::AccountId, u64, ValueQuery, DefaultStake<T>>;
+	#[pallet::storage] // --- DMAP ( key, delegate ) --> stake | Returns the stake under a key prefixed by key.
+	pub type Stake<T:Config> = StorageDoubleMap<_,Identity,  T::AccountId,  Identity, T::AccountId, u64, ValueQuery, DefaultStake<T>>;
 	#[pallet::storage] // --- MAP ( netuid ) --> Registration this Block.
 	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
 	#[pallet::storage] // --- ITEM( global_max_registrations_per_block ) 
@@ -246,7 +257,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// Event documentation should end with an array that provides descriptive names for event
+		// Event documentation should e
+		// nd with an array that provides descriptive names for event
 		// parameters. [something, who]
 		NetworkAdded( u16, Vec<u8> ),	// --- Event created when a new network is added.
 		NetworkRemoved( u16 ), // --- Event created when a network is removed.
@@ -256,7 +268,7 @@ pub mod pallet {
 		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
 		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		BulkBalancesSet(u16, u16),
-		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
+		MaxNSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
 		MaxRegistrationsPerBlockSet( u16, u16), // --- Event created when we set max registrations per block
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
@@ -283,7 +295,7 @@ pub mod pallet {
 		NotSettingEnoughWeights, // ---- Thrown when the dispatch attempts to set weights on chain with fewer elements than are allowed.
 		TooManyRegistrationsThisBlock, // ---- Thrown when registrations this block exceeds allowed number.
 		AlreadyRegistered, // ---- Thrown when the caller requests registering a module which already exists in the active set.
-		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxAllowedUids
+		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxN
 		CouldNotConvertToBalance, // ---- Thrown when the dispatch attempts to convert between a u64 and T::balance but the call fails.
 		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a key to the total stake which already added
 		StorageValueOutOfRange, // --- Thrown when the caller attempts to set a storage value outside of its allowed range.
@@ -291,10 +303,10 @@ pub mod pallet {
 		InvalidTempo, // --- Thrown when epoch is not valid
 		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_epoch/2 blocks.
 		BalanceSetError, // --- Thrown when an error occurs setting a balance
-		MaxAllowedUidsExceeded, // --- Thrown when number of accounts going to be registered exceed MaxAllowedUids for the network.
+		MaxNExceeded, // --- Thrown when number of accounts going to be registered exceed MaxN for the network.
 		TooManyUids, // ---- Thrown when the caller attempts to set weights with more uids than allowed.
 		TxRateLimitExceeded, // --- Thrown when a transactor exceeds the rate limit for transactions.
-		InvalidMaxAllowedUids, // --- Thrown when the user tries to set max allowed uids to a value less than the current number of registered uids.
+		InvalidMaxN, // --- Thrown when the user tries to set max allowed uids to a value less than the current number of registered uids.
 		SubnetNameAlreadyExists,
 		ModuleNameTooLong,
 		KeyAlreadyRegistered,
@@ -396,12 +408,12 @@ pub mod pallet {
 			netuid: u16,
 			stake: u64,
 			immunity_period: u16,
-			min_allowed_weights: u16,
-			max_allowed_uids: u16,
+			min_weights: u16,
+			max_n: u16,
 			tempo: u16,
 			founder: T::AccountId,
 		) -> DispatchResult {
-			Self::do_update_network(origin,netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founder)
+			Self::do_update_network(origin,netuid, stake, immunity_period, min_weights, max_n, tempo, founder)
 		}
 
 

@@ -25,18 +25,12 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-
     pub fn epoch( netuid: u16, token_emission: u64 ) {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
         log::trace!( "n: {:?}", n );
-
-        // Get current block.
         let current_block: u64 = Self::get_current_block_as_u64();
         log::trace!( "current_block: {:?}", current_block );
-
-
-        // Block at registration vector (block when each module was most recently registered).
         let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
         log::trace!( "Block at registration: {:?}", &block_at_registration );
 

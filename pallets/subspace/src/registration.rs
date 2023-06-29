@@ -45,10 +45,10 @@ impl<T: Config> Pallet<T> {
         ensure!( !already_registered, Error::<T>::KeyAlreadyRegistered );
         ensure!( !Self::if_module_name_exists( netuid, name.clone() ), Error::<T>::NameAlreadyRegistered );
         let current_block_number: u64 = Self::get_current_block_as_u64();
-        let mut uid: u16;
-        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
 
-        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
+        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        let mut uid: u16;
+        if current_subnetwork_n < Self::get_max_n( netuid ) {
             uid = Self::append_module( netuid, &key , name.clone(), address.clone(), stake);
             log::info!("add new module account");
         } else {

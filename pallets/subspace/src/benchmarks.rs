@@ -29,7 +29,7 @@ benchmarks! {
     let epoch: u16 = 1;
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), name.into(),  epoch.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, n ); 
+    Subspace::<T>::set_max_n( netuid, n ); 
 
     // Lets fill the network with 100 UIDS and no weights.
     let mut seed : u32 = 1;
@@ -55,7 +55,7 @@ benchmarks! {
     let epoch: u16 = 1;
         let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
     Subspace::<T>::do_add_network( caller_origin.clone(), netuid.try_into().unwrap(), name.into(), epoch.into());
-    Subspace::<T>::set_max_allowed_uids( netuid, n ); 
+    Subspace::<T>::set_max_n( netuid, n ); 
     Subspace::<T>::set_epoch( netuid, epoch );
 
     // Lets fill the network with 100 UIDS and no weights.
@@ -102,7 +102,7 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
    
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  epoch.into(), n.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
+    Subspace::<T>::set_max_n( netuid, 4096 ); 
 
    assert_ok!(Subspace::<T>::do_sudo_set_max_registrations_per_block(RawOrigin::Root.into(), netuid.try_into().unwrap(), 4096 ));
     
@@ -142,8 +142,8 @@ benchmarks! {
     let name: Vec<u8> = "DefaultModule".as_bytes().to_vec();
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  epoch, n ));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
-    assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
+    Subspace::<T>::set_max_n( netuid, 4096 ); 
+    assert_eq!(Subspace::<T>::get_max_n(netuid), 4096);
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
     let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();
@@ -169,8 +169,8 @@ benchmarks! {
     let netuid = Subspace::<T>::get_netuid_for_name(name.clone()).unwrap();
 
     assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), name.into(),  epoch.into(), n.into()));
-    Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
-    assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
+    Subspace::<T>::set_max_n( netuid, 4096 ); 
+    assert_eq!(Subspace::<T>::get_max_n(netuid), 4096);
 
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
     let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();

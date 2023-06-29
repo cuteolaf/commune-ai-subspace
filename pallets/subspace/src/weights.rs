@@ -61,16 +61,6 @@ impl<T: Config> Pallet<T> {
 
 
 
-    // Checks for any invalid uids on this network.
-    pub fn contains_invalid_uids( netuid: u16, uids: &Vec<u16> ) -> bool {
-        for uid in uids {
-            if !Self::is_uid_exist_on_network( netuid, *uid ) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // Returns true if the passed uids have the same length of the passed values.
     fn uids_match_values(uids: &Vec<u16>, values: &Vec<u16>) -> bool {
         return uids.len() == values.len();
@@ -88,7 +78,7 @@ impl<T: Config> Pallet<T> {
 
     // Returns True if the uids and weights are have a valid length for uid on network.
     pub fn check_length( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
-        let min_allowed_length: usize = Self::get_min_allowed_weights(netuid) as usize;
+        let min_allowed_length: usize = Self::get_min_weights(netuid) as usize;
 
         // Check self weight. Allowed to set single value for self weight.
         if Self::is_self_weight(uid, uids, weights) {
@@ -125,4 +115,13 @@ impl<T: Config> Pallet<T> {
         return uids.len() <= subnetwork_n as usize;
     }
     
+    // Checks for any invalid uids on this network.
+    pub fn contains_invalid_uids( netuid: u16, uids: &Vec<u16> ) -> bool {
+        for uid in uids {
+            if !Self::is_uid_exist_on_network( netuid, *uid ) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

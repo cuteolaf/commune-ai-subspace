@@ -67,7 +67,7 @@ impl<T: Config> Pallet<T> {
             Address::<T>::remove(netuid, uid ); // Make uid - key association.
             BlockAtRegistration::<T>::remove( netuid, uid ); // Fill block at registration.
             Weights::<T>::remove( netuid, uid ); // Make uid - key association.
-            Self::remove_all_stake_on_account( netuid, &key.clone() ); // Make uid - key association.
+            Self::remove_all_stake_on_account( &key.clone() ); // Make uid - key association.
 
             N::<T>::mutate( netuid, |v| *v -= 1 ); // Decrease the number of modules in the network.
             // 3. Remove the network if it is empty.

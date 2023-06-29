@@ -83,8 +83,8 @@ impl<T: Config> Pallet<T> {
 
     // Returns the stake under the cold - hot pairing in the staking table.
     //
-    pub fn get_stake(netuid:u16, key: &T::AccountId ) -> u64 { 
-        return Stake::<T>::get(netuid,  key );
+    pub fn get_stake( key: &T::AccountId ) -> u64 { 
+        return Stake::<T>::get(key,  key );
     }
 
 
@@ -108,7 +108,7 @@ impl<T: Config> Pallet<T> {
         // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( increment );
         // --- 6. Ensure the remove operation from the key is a success.
-        Stake::<T>::insert(netuid, key, Stake::<T>::get(netuid, key).saturating_add( increment ) );
+        Stake::<T>::insert(key, key, Stake::<T>::get(key, key).saturating_add( increment ) );
         SubnetTotalStake::<T>::insert(netuid , SubnetTotalStake::<T>::get(netuid).saturating_add( increment ) );
         TotalStake::<T>::put(TotalStake::<T>::get().saturating_add( increment ) );
 
@@ -123,7 +123,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 8. We add the balancer to the key.  If the above fails we will not credit this key.
         Self::add_balance_to_account( &key, stake_to_be_added_as_currency.unwrap() );
-        Stake::<T>::insert( netuid, key, Stake::<T>::get(netuid,  key).saturating_sub( decrement ) );
+        Stake::<T>::insert( key, key, Stake::<T>::get(key,  key).saturating_sub( decrement ) );
         TotalStake::<T>::put(TotalStake::<T>::get().saturating_sub( decrement ) );
         SubnetTotalStake::<T>::insert(netuid, SubnetTotalStake::<T>::get(netuid).saturating_sub( decrement ) );
     }
@@ -132,16 +132,21 @@ impl<T: Config> Pallet<T> {
     //
     pub fn decrease_all_stake_on_account(netuid:u16, key: &T::AccountId ) {
 
-        let decrement = Stake::<T>::get(netuid,  &key);
+        let decrement = Stake::<T>::get(&key,  &key);
         Self::decrease_stake_on_account(netuid, &key, decrement );
     }
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
     //
-    pub fn remove_all_stake_on_account(netuid:u16, key: &T::AccountId ) {
+    pub fn remove_all_stake_on_account(key: &T::AccountId ) {
 
-        Self::decrease_all_stake_on_account(netuid, &key );
-        Stake::<T>::remove(netuid, &key);
+        Self::decrease_all_stake_on_account(&key );
+
+        for (delegate_key, delegate_amount) in Stake::<T>::iter_prefix(&key) {
+            Self::decrease_stake_on_account(&delegate_key, delegate_amount );
+        }
+        
+        
     }
 
 	pub fn u64_to_balance( input: u64 ) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance> { input.try_into().ok() }
