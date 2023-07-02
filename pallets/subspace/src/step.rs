@@ -44,12 +44,7 @@ impl<T: Config> Pallet<T> {
         // == Stake ==
         // ===========
 
-        let mut keys: Vec<(u16, T::AccountId)> = vec![];
-        for ( uid_i, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
-            keys.push( (uid_i, key) ); 
-        }
-        log::trace!( "keys: {:?}", &keys );
-
+        let mut keys: Vec<(u16, T::AccountId)> = Self::get_keys( netuid );
         // Access network stake as normalized vector.
         let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n as usize ];
         for (uid_i, key) in keys.iter() {
@@ -88,9 +83,15 @@ impl<T: Config> Pallet<T> {
 
         // Compute incentive: r_j = SUM(i) w_ij * s_i.
         let mut incentive: Vec<I32F32> = matmul_sparse( &weights, &stake, n );
+        // If emission is zero, do an even split.
+        if is_zero( &incentive ) { // no weights set
+            for (uid_i, key) in keys.iter() {
+                incentive[ *uid_i as usize ] = I32F32::from_num(1)/I32F32::from_num(incentive.len());
+            }
+        }
         inplace_normalize( &mut incentive );  // range: I32F32(0, 1)
         log::trace!( "Incentive: {:?}", &incentive );
-
+        
 
         // Compute bonds delta column normalized.
         let mut bonds: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &stake ); // ΔB = W◦S (outdated W masked)
@@ -106,25 +107,22 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut dividends );
         log::trace!( "D: {:?}", &dividends );
 
+
         // =================================
         // == Emission==
         // =================================
 
-        // Compute normalized emission scores. range: I32F32(0, 1)
-        let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        inplace_normalize( &mut normalized_emission );
+        // Computer emissions from dividends and incentives seperately.
+        let incentive_emission: Vec<I32F32> = incentive.iter().map( |ii| (ii * I32F32::from_num(token_emission))/2 ).collect();
+        let dividends_emission: Vec<I32F32> = incentive.iter().map( |ii| (ii * I32F32::from_num(token_emission))/2 ).collect();
 
-        // If emission is zero, do an even split.
-        if is_zero( &normalized_emission ) { // no weights set
-            for (uid_i, key) in keys.iter() {
-                normalized_emission[ *uid_i as usize ] = I32F32::from_num(1)/I32F32::from_num(normalized_emission.len());
-            }
-        }
+
+
+
+        let emission: Vec<I32F32> = dividends_emission.iter().zip( incentive_emission.iter() ).map( |(d, i)| (d + i) ).collect();
         
         // Compute rao based emission scores. range: I96F32(0, token_emission)
-        let emission: Vec<I96F32> = normalized_emission.iter().map( |e: &I32F32| I96F32::from_num( *e  ) * I96F32::from_num(token_emission) ).collect();
-        let emission: Vec<u64> = emission.iter().map( |e: &I96F32| e.to_num::<u64>() ).collect();
-        log::trace!( "nE: {:?}", &normalized_emission );
+        let emission: Vec<u64> = emission.iter().map( |e: &I32F32| e.to_num::<u64>() ).collect();
         log::trace!( "E: {:?}", &emission );
 
         // ===================
@@ -137,18 +135,26 @@ impl<T: Config> Pallet<T> {
         Dividends::<T>::insert( netuid, cloned_dividends );
 
         // Emission tuples ( keys, u64 emission)
-        let mut result: Vec<(T::AccountId, u64)> = vec![]; 
         for ( uid_i, key ) in keys.iter() {
-            result.push( ( key.clone(), emission[ *uid_i as usize ] ) );
+            Self::increase_stake_on_account(netuid, &key.clone(), &key.clone() , incentive_emission[ *uid_i as usize ].to_num::<u64>() );
         }
 
-
-            
-        // --- 6. emmit
-        for (key, amount) in result.iter() {                 
-            Self::increase_stake_on_account(netuid, &key, *amount );
-        }    
     
+        // Emission tuples ( keys, u64 emission)
+        let mut result: Vec<(T::AccountId, u64)> = vec![]; 
+        for ( uid_i, key ) in keys.iter() {
+            // If no dividend emission, then we do not need to do anything.
+            if dividends_emission[ *uid_i as usize ] > I32F32::from_num(0.0) {
+                let stake_vector: Vec<(T::AccountId, I32F32)> = <Stake<T>>::get( netuid, &key.clone() ).iter().map( |(k, v)| (k.clone(), I32F32::from_num(v.clone())) ).collect();
+                let total_stake: I32F32 = stake_vector.iter().map( |(_, stake)| stake ).sum();
+                for ( staking_key, staking_value) in stake_vector.iter(){
+                    // normalize stake vector
+                    let staker_dividend_emission: I32F32 = (dividends_emission[ *uid_i as usize ] * ( staking_value ));
+                    Self::increase_stake_on_account(netuid, &staking_key.clone(), &key.clone() , staker_dividend_emission.to_num::<u64>());
+                }
+            }
+        }
+
     }
 
     pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {

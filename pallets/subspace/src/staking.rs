@@ -1,5 +1,6 @@
 use super::*;
 use substrate_fixed::types::{I64F64};
+use frame_support::inherent::Vec;
 
 impl<T: Config> Pallet<T> { 
 
@@ -8,6 +9,7 @@ impl<T: Config> Pallet<T> {
 	pub fn do_add_stake(
         origin: T::RuntimeOrigin, 
         netuid: u16,
+        to_key: T::AccountId,
         stake_to_be_added: u64
     ) -> dispatch::DispatchResult {
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId key information.
@@ -16,7 +18,8 @@ impl<T: Config> Pallet<T> {
 
 		// --- 1. Ensure we don't exceed tx rate limit
 		// ensure!( !Self::exceeds_tx_rate_limit(&key), Error::<T>::TxRateLimitExceeded);
-
+        // --- 2. Ensure the key exists
+        ensure!( Self::is_key_registered_on_network( netuid, &to_key ), Error::<T>::KeyNotRegistered );
         
         log::info!("do_add_stake( origin:{:?} stake_to_be_added:{:?} )", key, stake_to_be_added );
 
@@ -27,11 +30,11 @@ impl<T: Config> Pallet<T> {
         
         Self::remove_balance_from_account( &key, stake_as_balance.unwrap() );
         // --- 4. If we reach here, add the balance to the key.
-        Self::increase_stake_on_account(netuid, &key, stake_to_be_added );
+        Self::increase_stake_on_account(netuid, &key, &to_key ,stake_to_be_added );
  
         // --- 5. Emit the staking event.
-        log::info!("StakeAdded( key:{:?}, stake_to_be_added:{:?} )", key, stake_to_be_added );
-        Self::deposit_event( Event::StakeAdded( key, stake_to_be_added ) );
+        log::info!("StakeAdded( key:{:?}, stake_to_be_added:{:?} )", to_key, stake_to_be_added );
+        Self::deposit_event( Event::StakeAdded( to_key, stake_to_be_added ) );
 
         // --- 6. Ok and return.
         Ok(())
@@ -41,30 +44,30 @@ impl<T: Config> Pallet<T> {
     pub fn do_remove_stake(
         origin: T::RuntimeOrigin, 
         netuid: u16,
+        to_key: T::AccountId,
         stake_to_be_removed: u64
     ) -> dispatch::DispatchResult {
 
-        // --- 1. We check the transaction is signed by the caller and retrieve the T::AccountId key information.
+        // 1. We check the transaction is signed by the caller and retrieve the T::AccountId key information.
         let key = ensure_signed( origin )?;
         log::info!("do_remove_stake( origin:{:?} stake_to_be_removed:{:?} )", key, stake_to_be_removed );
+        
+        // 2. ensure the to key exists (since we want to stake to it assuming its on the network)
+        ensure!( Self::is_key_registered_on_network(netuid, &to_key), Error::<T>::KeyNotRegistered );
 
-
-		// --- 6. Ensure we don't exceed tx rate limit
-		// ensure!( !Self::exceeds_tx_rate_limit(&key), Error::<T>::TxRateLimitExceeded );
-
-        // --- 5. Ensure that we can conver this u64 to a balance.
+        // 3. Ensure that we can conver this u64 to a balance.
         ensure!( Self::has_enough_stake(netuid, &key, stake_to_be_removed ), Error::<T>::NotEnoughStaketoWithdraw );
         let stake_to_be_added_as_currency = Self::u64_to_balance( stake_to_be_removed );
         ensure!( stake_to_be_added_as_currency.is_some(), Error::<T>::CouldNotConvertToBalance );
 
-        // --- 7. We remove the balance from the key.
-        Self::decrease_stake_on_account(netuid,  &key, stake_to_be_removed );
+        // 4. We remove the balance from the key.
+        Self::decrease_stake_on_account(netuid,  &key, &to_key, stake_to_be_removed );
 
-        // --- 9. Emit the unstaking event.
+        // 5. Emit the unstaking event.
         log::info!("StakeRemoved( key:{:?}, stake_to_be_removed:{:?} )", key, stake_to_be_removed );
         Self::deposit_event( Event::StakeRemoved( key, stake_to_be_removed ) );
 
-        // --- 10. Done and ok.
+        // 6. Done and ok.
         Ok(())
     }
 
@@ -84,7 +87,12 @@ impl<T: Config> Pallet<T> {
     // Returns the stake under the cold - hot pairing in the staking table.
     //
     pub fn get_stake(netuid:u16, key: &T::AccountId ) -> u64 { 
-        return Stake::<T>::get(netuid,  key );
+        let mut stake = 0;
+        let stake_vector: Vec<(T::AccountId, u64)> = Stake::<T>::get(netuid, key);
+        for (i, (stake_key, stake_amount)) in stake_vector.clone().iter().enumerate() {
+            stake += stake_amount;
+        }
+        return stake;
     }
 
 
@@ -103,12 +111,27 @@ impl<T: Config> Pallet<T> {
     // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
     // This function should be called rather than set_stake under account.
     // 
-    pub fn increase_stake_on_account(netuid:u16, key: &T::AccountId, increment: u64 ){
+    pub fn increase_stake_on_account(netuid:u16, from_key: &T::AccountId, to_key: &T::AccountId , increment: u64 ){
 
         // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( increment );
         // --- 6. Ensure the remove operation from the key is a success.
-        Stake::<T>::insert(netuid, key, Stake::<T>::get(netuid, key).saturating_add( increment ) );
+        // --- 7. We iterate through the vector to find the key.
+        let mut stake_vector: Vec<(T::AccountId, u64)> = Stake::<T>::get(netuid, to_key);
+        let mut found = false;
+        for (i, (stake_key, stake_amount)) in stake_vector.clone().iter().enumerate() {
+            if stake_key == from_key {
+                stake_vector[i] = (from_key.clone(), stake_amount.saturating_add( increment ) );
+                found = true;
+            }
+        }
+    
+        // --- 7. If we didn't find the key, we add it.
+        if !found {
+            stake_vector.push((from_key.clone(), increment));
+        }
+
+        Stake::<T>::insert(netuid, to_key, stake_vector );
         SubnetTotalStake::<T>::insert(netuid , SubnetTotalStake::<T>::get(netuid).saturating_add( increment ) );
         TotalStake::<T>::put(TotalStake::<T>::get().saturating_add( increment ) );
 
@@ -117,13 +140,36 @@ impl<T: Config> Pallet<T> {
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
     //
-    pub fn decrease_stake_on_account(netuid:u16, key: &T::AccountId, decrement: u64 ) {
+    pub fn decrease_stake_on_account(netuid:u16, from_key: &T::AccountId, to_key: &T::AccountId,  mut decrement: u64 ) {
 
-        let stake_to_be_added_as_currency = Self::u64_to_balance( decrement );
 
         // --- 8. We add the balancer to the key.  If the above fails we will not credit this key.
-        Self::add_balance_to_account( &key, stake_to_be_added_as_currency.unwrap() );
-        Stake::<T>::insert( netuid, key, Stake::<T>::get(netuid,  key).saturating_sub( decrement ) );
+
+    
+
+        let mut stake_vector = Stake::<T>::get( netuid, to_key);
+
+        for (index, (delegate_key, value)) in stake_vector.clone().iter().enumerate() {
+            if to_key == delegate_key {
+                if decrement >= *value {
+                    decrement = value.clone();
+                } 
+                let stake_to_be_added_as_currency = Self::u64_to_balance( decrement );
+                Self::add_balance_to_account( &to_key, stake_to_be_added_as_currency.unwrap() );
+                stake_vector[index] = (to_key.clone(), value.clone() - decrement);
+                if *value == decrement {
+                    stake_vector.remove(index);
+                }
+                
+                // break the loop
+                break;  
+                
+            }
+        }
+
+
+        Stake::<T>::mutate(netuid, to_key, |v| *v = stake_vector);
+
         TotalStake::<T>::put(TotalStake::<T>::get().saturating_sub( decrement ) );
         SubnetTotalStake::<T>::insert(netuid, SubnetTotalStake::<T>::get(netuid).saturating_sub( decrement ) );
     }
@@ -132,8 +178,9 @@ impl<T: Config> Pallet<T> {
     //
     pub fn decrease_all_stake_on_account(netuid:u16, key: &T::AccountId ) {
 
-        let decrement = Stake::<T>::get(netuid,  &key);
-        Self::decrease_stake_on_account(netuid, &key, decrement );
+        for (delegate_key, value) in Stake::<T>::get(netuid, key).iter() {
+            Self::decrease_stake_on_account(netuid, delegate_key, key, *value );
+        }
     }
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.

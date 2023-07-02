@@ -231,7 +231,7 @@ pub mod pallet {
 	#[pallet::storage] // --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
-	pub type Stake<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, T::AccountId, u64, ValueQuery, DefaultStake<T>>;
+	pub type Stake<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, T::AccountId, Vec<(T::AccountId, u64)>, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> Registration this Block.
 	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
 	#[pallet::storage] // --- ITEM( global_max_registrations_per_block ) 
@@ -298,6 +298,7 @@ pub mod pallet {
 		SubnetNameAlreadyExists,
 		ModuleNameTooLong,
 		KeyAlreadyRegistered,
+		KeyNotRegistered,
 		ModuleNameDoesNotExist,
 		KeyNameMismatch,
 		NotSubnetFounder,
@@ -382,11 +383,23 @@ pub mod pallet {
 		pub fn add_stake(
 			origin: OriginFor<T>, 
 			netuid: u16,
+			to_key: T::AccountId,
 			amount_staked: u64
 		) -> DispatchResult {
-			Self::do_add_stake(origin,netuid, amount_staked)
+			Self::do_add_stake(origin,netuid, to_key, amount_staked)
 		}
 
+		#[pallet::weight((Weight::from_ref_time(66_000_000)
+		.saturating_add(T::DbWeight::get().reads(8))
+		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
+		pub fn remove_stake(
+			origin: OriginFor<T>, 
+			netuid: u16,
+			to_key: T::AccountId,
+			amount_unstaked: u64
+		) -> DispatchResult {
+			Self::do_remove_stake(origin, netuid, to_key, amount_unstaked)
+		}
 
 		#[pallet::weight((Weight::from_ref_time(65_000_000)
 		.saturating_add(T::DbWeight::get().reads(8))
@@ -417,16 +430,7 @@ pub mod pallet {
 		}
 
 
-		#[pallet::weight((Weight::from_ref_time(66_000_000)
-		.saturating_add(T::DbWeight::get().reads(8))
-		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
-		pub fn remove_stake(
-			origin: OriginFor<T>, 
-			netuid: u16,
-			amount_unstaked: u64
-		) -> DispatchResult {
-			Self::do_remove_stake(origin, netuid, amount_unstaked)
-		}
+
 
 
 		#[pallet::weight((Weight::from_ref_time(19_000_000)

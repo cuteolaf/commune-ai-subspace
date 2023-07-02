@@ -289,9 +289,12 @@ impl<T: Config> Pallet<T> {
         N::<T>::remove( netuid );
 
         // --- 3. Erase network stake, and remove network from list of networks.
-        for ( key, stated_amount ) in <Stake<T> as IterableStorageDoubleMap<u16, T::AccountId, u64> >::iter_prefix(netuid){
-            Self::decrease_stake_on_account( netuid, &key, stated_amount );
+        // iter through keys and remove all stake
+
+        for ( key, stated_amount ) in <Stake<T> as IterableStorageDoubleMap<u16, T::AccountId, Vec<(T::AccountId, u64)>>>::iter_prefix(netuid){
+            Self::remove_all_stake_on_account( netuid, &key );
         }
+
         // --- 4. Remove all stake.
         Stake::<T>::remove_prefix( netuid, None );
         SubnetTotalStake::<T>::remove( netuid );
@@ -400,7 +403,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_stake_for_key( netuid: u16, key: &T::AccountId) -> u64 { 
         if Self::is_key_registered_on_network( netuid, &key) {
-            return Stake::<T>::get( netuid, &key );
+            return Stake::<T>::get( netuid, &key ).iter().map(|(k, v)| v).sum();
         } else {
             return 0;
         }
@@ -500,6 +503,14 @@ impl<T: Config> Pallet<T> {
 
     pub fn is_registered(netuid: u16, key: &T::AccountId) -> bool {
         return Uids::<T>::contains_key(netuid, &key)
+    }
+
+    pub fn get_keys( netuid: u16 ) -> Vec<(u16, T::AccountId)> {
+        let mut keys: Vec<(u16, T::AccountId)> = vec![];
+        for ( uid_i, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
+            keys.push( (uid_i, key) ); 
+        }
+        return keys;
     }
 
 }
