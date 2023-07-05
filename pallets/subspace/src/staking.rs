@@ -20,6 +20,8 @@ impl<T: Config> Pallet<T> {
 		// ensure!( !Self::exceeds_tx_rate_limit(&key), Error::<T>::TxRateLimitExceeded);
         // --- 2. Ensure the key exists
         ensure!( Self::is_key_registered_on_network( netuid, &to_key ), Error::<T>::KeyNotRegistered );
+
+        // ensure!(stake_to_be_added > 0, 
         
         log::info!("do_add_stake( origin:{:?} stake_to_be_added:{:?} )", key, stake_to_be_added );
 

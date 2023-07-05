@@ -66,7 +66,7 @@ impl<T: Config> Pallet<T> {
         min_allowed_weights: u16,
         max_allowed_uids: u16,
         tempo: u16,
-        founder: T::AccountId,
+        founders: Vec<T::AccountId>,
     ) -> DispatchResult {
 
         let key = ensure_signed(origin)?;
@@ -74,7 +74,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_netuid_exists( netuid ), Error::<T>::SubnetNameAlreadyExists );
         ensure!( Self::is_subnet_founder( netuid, &key ), Error::<T>::NotSubnetFounder );
 
-        Self::update_network_for_netuid( netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founder);
+        Self::update_network_for_netuid( netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founders);
         // --- 16. Ok and done.
         Ok(())
     }
@@ -86,12 +86,12 @@ impl<T: Config> Pallet<T> {
                     min_allowed_weights: u16,
                     max_allowed_uids: u16,
                     tempo: u16,
-                    founder: T::AccountId,) {
+                    founders: Vec<T::AccountId>,) {
         Tempo::<T>::insert( netuid, tempo);
         MaxAllowedUids::<T>::insert( netuid, max_allowed_uids );
         ImmunityPeriod::<T>::insert( netuid, immunity_period );
         MinAllowedWeights::<T>::insert( netuid, min_allowed_weights );
-        Founder::<T>::insert( netuid, founder );
+        Founders::<T>::mutate( netuid, |v| *v = founders );
     }
 
 
@@ -117,7 +117,12 @@ impl<T: Config> Pallet<T> {
 
 
     pub fn is_subnet_founder( netuid: u16, key: &T::AccountId ) -> bool {
-        return Founder::<T>::get( netuid) == *key;
+        for founder in Founders::<T>::get( netuid).iter() {
+            if founder == key {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -197,7 +202,7 @@ impl<T: Config> Pallet<T> {
         ImmunityPeriod::<T>::insert( netuid, immunity_period );
         MinAllowedWeights::<T>::insert( netuid, min_allowed_weights );
         SubnetNamespace::<T>::insert( name.clone(), netuid );
-        Founder::<T>::insert( netuid, founder );
+        Founders::<T>::mutate( netuid, |v| v.push(founder.clone()) );
 
         // set stat once network is created
         TotalSubnets::<T>::mutate( |n| *n += 1 );
@@ -257,8 +262,13 @@ impl<T: Config> Pallet<T> {
 
     // Returns true if the account is the founder of the network.
     pub fn is_network_founder( netuid: u16, key: &T::AccountId ) -> bool {
-        let founder = Founder::<T>::get( netuid );
-        return founder == key.clone();
+        for founder in Founders::<T>::get( netuid ).iter() {
+            if founder == key {
+                return true;
+            }
+        }
+        return false;
+
     }
 
 
@@ -279,7 +289,7 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::remove( netuid );
         Dividends::<T>::remove( netuid );
         LastUpdate::<T>::remove( netuid );
-        Founder::<T>::remove( netuid );
+        Founders::<T>::remove( netuid );
 
         // --- 2. Erase network parameters.
         Tempo::<T>::remove( netuid );

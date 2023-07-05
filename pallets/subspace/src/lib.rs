@@ -127,6 +127,20 @@ pub mod pallet {
 		pub emission: u64,
 	}
 
+	#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+	pub struct SubnetParams {
+
+		// --- parameters
+		pub name: Vec<u8>,
+		pub immunity_period: u16, // how many blocks to wait before rewarding models
+		pub min_allowed_weights: u16, // min number of weights allowed to be registered in this subnet
+		pub max_allowed_uids: u16, // max number of uids allowed to be registered in this subnet
+		pub tempo: u16, // how many blocks to wait before rewarding models
+		pub max_proposals: u16, // maximum proposals in the queue
+		pub max_proposal_period: u16 // max number of blocks from the proposal
+	}
+
+
 
 
 	// ==============================
@@ -156,37 +170,8 @@ pub mod pallet {
 	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultTempo<T: Config>() -> u16 { 1 }
-
-	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
-	pub type TotalSubnets<T> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
-	pub type SubnetEmission<T> = StorageMap< _, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
-	pub type N<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
-	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
-	pub type Founder<T:Config> = StorageMap<_, Identity, u16, T::AccountId, ValueQuery, DefaultAccount<T>>;
-
-	#[pallet::storage] // --- MAP ( netuid ) --> epoch
-	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> pending_emission
-	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> bonds
-	pub(super) type MaxNameLength<T:Config> = StorageValue< _, u16, ValueQuery, DefaultMaxNameLength<T> >;
-	
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
-	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>,  u16 , ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_uids
-	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> immunity_period
-	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
-	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
-	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
-
-	// =======================================
-	// ==== Subnetwork Storage  ====
-	// =======================================
+	#[pallet::type_value]
+	pub fn DefaultMaxProposalPeriod<T: Config>() -> u16 { 100 } // period of the proposal in blocks
 	#[pallet::type_value] 
 	pub fn EmptyU16Vec<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::type_value] 
@@ -197,8 +182,54 @@ pub mod pallet {
 	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
+	#[pallet::type_value] 
+	pub fn DefaultFounders<T:Config>() -> Vec<T::AccountId> { vec![] }
+	#[pallet::type_value] 
+	pub fn DefaultStake<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
-	
+
+	// =======================================
+	// ==== Subnet Parameters  ====
+	// =======================================
+	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
+	pub type SubnetNamespace<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>,  u16 , ValueQuery>;
+	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_uids
+	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> immunity_period
+	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
+	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
+	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
+	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
+	pub type Founders<T:Config> = StorageMap<_, Identity, u16, Vec<T::AccountId>, ValueQuery>;
+	#[pallet::storage] // --- MAP ( netuid ) --> epoch
+	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
+
+
+
+
+	// =======================================
+	// ==== Subnetwork Storage  ====
+	// =======================================
+	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
+	pub type Proposals<T> = StorageValue<_, u16, ValueQuery>;
+	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
+	pub type TotalSubnets<T> = StorageValue<_, u16, ValueQuery>;
+	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
+	pub type SubnetEmission<T> = StorageMap< _, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
+	pub type N<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> pending_emission
+	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
+	#[pallet::storage] // --- DMAP ( netuid ) --> bonds
+	pub(super) type MaxNameLength<T:Config> = StorageValue< _, u16, ValueQuery, DefaultMaxNameLength<T> >;
+
+	// =======================================
+	// ==== Module Storage  ====
+	// =======================================
 	#[pallet::storage] // --- DMAP ( netuid ) --> incentive
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP ( netuid ) --> dividends
@@ -223,10 +254,6 @@ pub mod pallet {
 	// ============================
 	// ==== Staking + Accounts ====
 	// ============================
-	#[pallet::type_value] 
-	pub fn DefaultStake<T: Config>() -> u64 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
 	#[pallet::storage] // --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
@@ -302,7 +329,8 @@ pub mod pallet {
 		ModuleNameDoesNotExist,
 		KeyNameMismatch,
 		NotSubnetFounder,
-		NameAlreadyRegistered
+		NameAlreadyRegistered,
+		StakeMustBeGreaterThanZero,
 	}
 
 	// ==================
@@ -412,9 +440,25 @@ pub mod pallet {
 			min_allowed_weights: u16,
 			max_allowed_uids: u16,
 			tempo: u16,
-			founder: T::AccountId,
+			founders: Vec<T::AccountId>,
 		) -> DispatchResult {
-			Self::do_update_network(origin,netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founder)
+			Self::do_update_network(origin,netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founders)
+		}
+
+		#[pallet::weight((Weight::from_ref_time(65_000_000)
+		.saturating_add(T::DbWeight::get().reads(8))
+		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
+		pub fn propose_update_network(
+			origin: OriginFor<T>, 
+			netuid: u16,
+			stake: u64,
+			immunity_period: u16,
+			min_allowed_weights: u16,
+			max_allowed_uids: u16,
+			tempo: u16,
+			founders: Vec<T::AccountId>,
+		) -> DispatchResult {
+			Self::do_update_network(origin,netuid, stake, immunity_period, min_allowed_weights, max_allowed_uids, tempo, founders)
 		}
 
 
@@ -428,10 +472,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::do_remove_network(origin,netuid)
 		}
-
-
-
-
 
 		#[pallet::weight((Weight::from_ref_time(19_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
