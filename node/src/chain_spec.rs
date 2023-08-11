@@ -71,8 +71,8 @@ struct SubspaceJSONState {
 	balances: std::collections::HashMap<String, u64>,
 	// subnet -> (name, tempo, immunity_period, min_allowed_weights, max_allowed_weights, max_allowed_uids, founder)
 	subnets: Vec<(String, u16, u16, u16, u16, u16, String )>,
-	// module -> (key, name, address, stake, weights)
-	modules : Vec<Vec<(String, String, String, u64, Vec<(u16, u16)>)>>,
+	// module -> (key, name, address, stake, profit_ratio, weights)
+	modules : Vec<Vec<(String, String, String, u64, u16 , Vec<(u16, u16)>)>>,
 
 	block: u32,
 

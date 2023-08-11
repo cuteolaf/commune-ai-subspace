@@ -21,6 +21,7 @@ impl<T: Config> Pallet<T> {
         name: Vec<u8>,
         address: Vec<u8>,
         stake_amount: u64,
+        profit_ratio: u16,
     ) -> DispatchResult {
 
         // --- 1. Check that the caller has signed the transaction. 
@@ -32,7 +33,7 @@ impl<T: Config> Pallet<T> {
         if stake > 0 {
             // --- 1. Check that the caller has enough balance to stake.
             ensure!( Self::can_remove_balance_from_account( &key, stake ), Error::<T>::NotEnoughBalanceToStake );
-        }
+        }c
 
         let mut netuid: u16 = 0;       
         let new_network : bool = !Self::if_subnet_name_exists( network.clone() );
@@ -58,10 +59,10 @@ impl<T: Config> Pallet<T> {
         let n: u16 = Self::get_subnet_n( netuid );
 
         if n < Self::get_max_allowed_uids( netuid ) {
-            uid = Self::append_module( netuid, &key , name.clone(), address.clone(), module_stake.clone());
+            uid = Self::append_module( netuid, &key , name.clone(), address.clone(), module_stake.clone(), profit_ratio.clone() );
         } else {
             uid = Self::get_lowest_uid( netuid );
-            Self::replace_module( netuid, uid, &key , name.clone(), address.clone(), module_stake.clone());
+            Self::replace_module( netuid, uid, &key , name.clone(), address.clone(), module_stake.clone(), profit_ratio.clone() );
             log::info!("prune module {:?} from network {:?} ", uid, netuid);
         }
 

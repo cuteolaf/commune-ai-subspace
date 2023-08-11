@@ -285,7 +285,7 @@ pub mod pallet {
 	#[pallet::storage] 
 	pub type Address<T: Config> = StorageDoubleMap<_, Twox64Concat, u16, Twox64Concat, u16, Vec<u8>, ValueQuery>;
 	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
-	pub type ProfitShareRatio<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, u16,  u16, ValueQuery>;
+	pub type ProfitRatio<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, u16,  u16, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type RegistrationBlock<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
@@ -294,6 +294,7 @@ pub mod pallet {
 	pub type StakeFrom<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, T::AccountId, Vec<(T::AccountId, u64)>, ValueQuery>;
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> Vec<(uid, stake )> | Returns the stake under a key prefixed by key.
 	pub type StakeTo<T:Config> = StorageDoubleMap<_,Identity, u16,  Identity, T::AccountId, Vec<(T::AccountId, u64)>, ValueQuery>;
+
 	// =======================================
 	// ==== Module Consensus Variables  ====
 	// =======================================
@@ -389,7 +390,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	pub struct GenesisConfig<T: Config> {
 		// key, name, address, stake, weights 
-		pub modules: Vec<Vec<(T::AccountId, Vec<u8>, Vec<u8>, u64, Vec<(u16, u16)>)>>,
+		pub modules: Vec<Vec<(T::AccountId, Vec<u8>, Vec<u8>, u64, u16, Vec<(u16, u16)>)>>,
 		// name, tempo, immunity_period, max_allowed_uids, min_allowed_weight, max_registrations_per_block, max_allowed_weights
 		pub subnets: Vec<(Vec<u8>, u16, u16, u16, u16, u16, T::AccountId)>,
 
@@ -426,9 +427,9 @@ pub mod pallet {
 											   &subnet.6, // founder
 											   0 as u64 // stake
 											);
-				for (uid_usize, (key, name, address, stake, weights)) in self.modules[subnet_idx].iter().enumerate() {
+				for (uid_usize, (key, name, address, stake, profit_ratio,  weights)) in self.modules[subnet_idx].iter().enumerate() {
 					let uid = uid_usize as u16;
-					self::Pallet::<T>::append_module(netuid, key, name.clone(), address.clone(), *stake);
+					self::Pallet::<T>::append_module(netuid, key, name.clone(), address.clone(), *stake, *profit_ratio );
 					Weights::<T>::insert(netuid, uid , weights);
 					
 				}
@@ -610,8 +611,9 @@ pub mod pallet {
 				name: Vec<u8>,
 				address: Vec<u8>,
 				stake: u64, 
+				profit_ratio: u16,
 		) -> DispatchResult { 
-			Self::do_registration(origin, network , name, address, stake,)
+			Self::do_registration(origin, network , name, address, stake,profit_ratio)
 		}
 		
 	}	

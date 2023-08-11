@@ -59,6 +59,7 @@ impl<T: Config> Pallet<T> {
             LastUpdate::<T>::insert( netuid, last_update ); // Make uid - key association.
             RegistrationBlock::<T>::insert( netuid, uid, block_number ); // Fill block at registration.
             Address::<T>::insert( netuid, uid, address ); // Fill module info.
+            ProfitRatio::<T>::insert( netuid, uid, 0 ); // Fill module info.
 
             let old_name = Names::<T>::get( netuid, uid );
             Namespace::<T>::remove( netuid, old_name.clone() ); // Fill module namespace.
@@ -101,6 +102,7 @@ impl<T: Config> Pallet<T> {
             Address::<T>::remove(netuid, replace_uid ); // Make uid - key association.
             RegistrationBlock::<T>::remove( netuid, replace_uid ); // Fill block at registration.
             Weights::<T>::remove( netuid, replace_uid ); // Make uid - key association.
+            ProfitRatio::<T>::remove( netuid, replace_uid ); // Fill module info.
             N::<T>::mutate( netuid, |v| *v -= 1 ); // Decrease the number of modules in the network.
             let replace_uid_name: Vec<u8>= Names::<T>::get( netuid, replace_uid );
             Names::<T>::remove( netuid, replace_uid ); // Make uid - key association.
@@ -127,7 +129,7 @@ impl<T: Config> Pallet<T> {
     
 
         // Appends the uid to the network.
-        pub fn append_module( netuid: u16, key: &T::AccountId , name: Vec<u8>, address: Vec<u8>, stake: u64 ) -> u16{
+        pub fn append_module( netuid: u16, key: &T::AccountId , name: Vec<u8>, address: Vec<u8>, stake: u64 , profit_ratio:u16) -> u16{
     
             // 1. Get the next uid. This is always equal to subnetwork_n.
             let uid: u16 = Self::get_subnet_n( netuid );
@@ -147,6 +149,7 @@ impl<T: Config> Pallet<T> {
             Namespace::<T>::insert( netuid, name.clone(), uid ); // Fill module namespace.
             Names::<T>::insert( netuid, uid, name.clone() ); // Fill module namespace.
             Address::<T>::insert( netuid, uid, address.clone() ); // Fill module info.
+            ProfitRatio::<T>::insert( netuid, uid, profit_ratio ); // Fill module info.
 
             Self::add_stake_to_module( netuid, key, key, stake );
             

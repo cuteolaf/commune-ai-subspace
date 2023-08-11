@@ -243,9 +243,18 @@ impl<T: Config> Pallet<T> {
         let ownership_vector: Vec<(T::AccountId, I64F64)> = Self::get_ownership_ratios(netuid, module_key );
         let mut emission_vector: Vec<(T::AccountId, u64)> = Vec::new();
 
+        
+        let profit_ratio : I64F64  = I64F64::from_num(Self::get_profit_ratio_for_key( netuid ))/ I32F32::from_num(100);
+        let owner_emission: u64 = (profit_ratio * I64F64::from_num(emission)).to_num::<u64>();
+        let delegate_emission : u64 = ((I64F64::from_num(1) - profit_ratio)*I64F64::from_num(emission)).to_num::<u64>();
         for (k, v) in ownership_vector {
-            let emission_for_delegate = (v * I64F64::from_num(emission)).to_num::<u64>();
-            emission_vector.push( (k, emission_for_delegate) );
+            if k == module_key.clone() {
+                emission_vector.push( (k, owner_emission) );
+            } else {
+                let emission_for_delegate = (v * I64F64::from_num(delegate_emission)).to_num::<u64>();
+                emission_vector.push( (k, emission_for_delegate) );
+            }
+
         }
 
         return emission_vector;

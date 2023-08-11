@@ -5,6 +5,20 @@ use sp_std::vec::Vec;
 
 impl<T: Config> Pallet<T> { 
 
+`
+    // pub fn do_add_controller(
+    //     origin: T::RuntimeOrigin,
+    //     controller: T::AccountId,
+    // ) -> dispatch::DispatchResult {
+    //     let key = ensure_signed( origin.clone() )?;
+    //     ensure!(Self::is_registered( netuid, &key.clone() ), Error::<T>::NotRegistered);
+    //     ensure!(!Self::is_registered( netuid, &controller.clone() ), Error::<T>::AlreadyRegistered);
+    //     Controller2Key::<T>::mutate(&key);
+    //     Key2Controller::<T>::mutate(&key);
+    //     Ok(())
+    
+    // }
+
 
     pub fn do_add_stake_multiple(
         origin: T::RuntimeOrigin,
