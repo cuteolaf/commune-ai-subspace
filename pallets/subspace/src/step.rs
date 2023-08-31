@@ -30,7 +30,8 @@ impl<T: Config> Pallet<T> {
     pub fn deregister_uids_with_zero_emission( netuid: u16 ) {
         let uids: Vec<u16> = Self::get_uids_with_zero_emission( netuid );
         for uid in uids {
-            Self::remove_module( netuid, uid );
+            let key: T::AccountId = Self::get_key_for_uid( netuid, uid );
+            Self::remove_module_for_key( netuid, &key );
         }
     }
 

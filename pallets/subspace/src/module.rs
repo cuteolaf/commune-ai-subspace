@@ -78,6 +78,10 @@ impl<T: Config> Pallet<T> {
 
 
 
+        pub fn remove_module_for_key( netuid: u16, key: &T::AccountId ) {
+            let uid: u16 = Self::get_uid_for_key( netuid, key );
+            Self::remove_module( netuid, uid );
+        }
     
 
         // Replace the module under this uid.

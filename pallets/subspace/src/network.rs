@@ -661,7 +661,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_tempo( netuid:u16 ) -> u16{ Tempo::<T>::get( netuid ) }
     pub fn get_pending_emission( netuid:u16 ) -> u64{ PendingEmission::<T>::get( netuid ) }
     pub fn get_registrations_this_block(  ) -> u16 { RegistrationsThisBlock::<T>::get(  ) }
-    pub fn get_module_block_at_registration( netuid: u16, module_uid: u16 ) -> u64 { RegistrationBlock::<T>::get( netuid, module_uid )}
+    pub fn get_module_block_at_registration( netuid: u16, uid: u16 ) -> u64 { RegistrationBlock::<T>::get( netuid, uid )}
 
     // ========================
 	// ==== Rate Limiting =====
@@ -672,6 +672,20 @@ impl<T: Config> Pallet<T> {
 	// Configure tx rate limiting
 	pub fn get_tx_rate_limit() -> u64 { TxRateLimit::<T>::get() }
     pub fn set_tx_rate_limit( tx_rate_limit: u64 ) { TxRateLimit::<T>::put( tx_rate_limit ) }
+
+    pub fn modules_in_immunity(netuid:u16) -> Vec<u16> {
+
+        let mut modules_in_immunity = Vec::<u16>::new();
+        let block_at_registration: Vec<u64>  = Self::get_block_at_registration(netuid);
+        let immunity_period: u64 = Self::get_immunity_period(netuid) as u64;
+        let current_block: u64 = Self::get_current_block_as_u64();
+        for (uid, reg_block) in block_at_registration.iter().enumerate() {
+            if (current_block - *reg_block) < immunity_period {
+                modules_in_immunity.push(uid as u16);
+            }
+        }
+        return modules_in_immunity;
+    }
 
     pub fn get_immunity_period(netuid: u16 ) -> u16 { ImmunityPeriod::<T>::get( netuid ) }
     pub fn set_immunity_period( netuid: u16, immunity_period: u16 ) { ImmunityPeriod::<T>::insert( netuid, immunity_period ); }
