@@ -85,7 +85,7 @@ impl<T: Config> Pallet<T> {
         let stake_after_add: u64 = Self::get_stake_to_module(netuid, &key, &module_key.clone() );
         let balance_after_add: u64 = Self::get_balance_u64(&key);
 
-        ensure!( stake_after_add == stake_before_add + amount, Error::<T>::StakeNotAdded );
+        ensure!( stake_after_add   == stake_before_add + amount, Error::<T>::StakeNotAdded );
         ensure!( balance_after_add == balance_before_add - amount, Error::<T>::BalanceNotRemoved );
         
         // --- 5. Emit the staking event.
@@ -382,7 +382,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn has_enough_balance(key: &T::AccountId, amount: u64 ) -> bool {
-        return Self::get_balance_u64(key) > amount;
+        return Self::get_balance_u64(key) >= amount;
     }
 
 
