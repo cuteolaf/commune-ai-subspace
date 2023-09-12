@@ -80,11 +80,12 @@ impl<T: Config> Pallet<T> {
         let balance_before_add: u64 = Self::get_balance_u64(&key);
 
         Self::increase_stake(netuid, &key, &module_key, amount );
-        Self::remove_balance_from_account( &key, Self::u64_to_balance( amount ).unwrap() );
+        ensure!(Self::remove_balance_from_account( &key, Self::u64_to_balance( amount ).unwrap() ), Error::<T>::BalanceNotRemoved);
 
         let stake_after_add: u64 = Self::get_stake_to_module(netuid, &key, &module_key.clone() );
         let balance_after_add: u64 = Self::get_balance_u64(&key);
 
+        // --- 4. Ensure that the stake and balance have been updated correctly.
         ensure!( stake_after_add   == stake_before_add + amount, Error::<T>::StakeNotAdded );
         ensure!( balance_after_add == balance_before_add - amount, Error::<T>::BalanceNotRemoved );
         
@@ -396,5 +397,4 @@ impl<T: Config> Pallet<T> {
             }
         };
     }
-
 }

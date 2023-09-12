@@ -16,7 +16,7 @@ fn test_add_subnets() {
         let tempo: u16 = 13;
         let num_subnets: u16 = 100;
         let mut stake_per_module : u64 = 1_000_000_000;
-        let max_allowed_subnets : u16 = SubspaceModule::get_max_allowed_subnets();
+        let num_subnets : u16 = SubspaceModule::get_max_allowed_subnets();
         println!("MAX ALLOWED SUBNETS: {}", max_allowed_subnets);
 
         for i in 0..num_subnets {
@@ -30,6 +30,14 @@ fn test_add_subnets() {
             assert_eq!(SubspaceModule::get_number_of_subnets(), i+1);
 
         }
+
+        for i in 0..num_subnets {
+            register_module(i + num_subnets, U256::from(0), stake_per_module);
+
+            assert_eq!(SubspaceModule::get_subnet_n(i), num_subnets);
+        }
+
+        });
 });}
 
 #[test]
@@ -57,11 +65,7 @@ fn test_min_immunity_ratio(netuid: u16) {
         SubspaceModule::set_max_immunity_ratio(netuid, max_immunity_ratio);
         SubspaceModule::set_max_allowed_uids(netuid, n);
 
-
         let topk : usize =  ((n * max_immunity_ratio) / 100) as usize;
-
-
-
 
         register_n_modules(netuid, n, stake_per_module);
 
@@ -136,11 +140,6 @@ fn test_set_single_temple(tempo:u16) {
     }
 
 
-
-
-
-
-
 #[test]
 fn test_set_tempo() { 
     for tempo in [1,2,4,8,16, 32, 64, 128] {
@@ -148,8 +147,6 @@ fn test_set_tempo() {
 
     }
 }
-
-
 
 #[test]
 fn test_emission_ratio() { 
