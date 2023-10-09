@@ -104,19 +104,14 @@ pub mod opaque {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-subspace"),
-	impl_name: create_runtime_str!("node-subspace"),
-	authoring_version: 1,
-	// The version of the runtime specification. A full node will not attempt to use its native
-	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
-	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
-	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
-	//   the compatible custom types.
-	spec_version: 110,
-	impl_version: 1,
-	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
-	state_version: 1,
+	spec_name: create_runtime_str!("node-subspace"), // specifies the name of the runtime.
+	impl_name: create_runtime_str!("node-subspace"), // specifies the name of the outer node client.
+	authoring_version: 1, //authoring_version specifies the version for block authors.
+	spec_version: 100, //spec_version specifies the version of the runtime.
+	impl_version: 1, // impl_version specifies the version of the outer node client.
+	apis: RUNTIME_API_VERSIONS, // apis specifies the list of supported APIs.
+	transaction_version: 1, // transaction_version specifies the version of the dispatchable function interface.
+	state_version: 1, // state_version specifies the version of the key-value trie data structure that the runtime uses.
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -320,6 +315,14 @@ impl pallet_subspace::Config for Runtime {
 	type Currency = Balances;
 }
 
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+  }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -336,7 +339,8 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
-		SubspaceModule: pallet_subspace
+		SubspaceModule: pallet_subspace,
+		Utility: pallet_utility
 	}
 );
 
